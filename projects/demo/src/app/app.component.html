@@ -1,0 +1,9 @@
+<lib-annotorious-openseadragon
+  [imageSource]="dziUrl"
+  [theme]="theme"
+  [defaultTool]="'rectangle'"
+  [showToolbar]="true"
+  (annotationCreated)="onAnnotationCreated($event)"
+  (annotationUpdated)="onAnnotationUpdated($event)"
+  (annotationDeleted)="onAnnotationDeleted($event)">
+</lib-annotorious-openseadragon>

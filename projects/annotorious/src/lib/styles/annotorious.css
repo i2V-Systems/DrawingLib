@@ -1,0 +1,199 @@
+/* Base container styles */
+.annotorious-container,
+.osd-annotorious-container {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+/* SVG layer styles */
+.annotorious-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+/* Shape styles */
+.annotorious-shape {
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+}
+
+.annotorious-shape-handle {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+/* Selection styles */
+.annotorious-selected {
+  cursor: move;
+}
+
+.annotorious-selected .annotorious-shape-handle {
+  display: block;
+}
+
+/* Hover styles */
+.annotorious-hover {
+  cursor: pointer;
+}
+
+/* Toolbar styles */
+.annotorious-toolbar,
+.osd-annotorious-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.annotorious-tool-button,
+.osd-annotorious-tool-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.annotorious-tool-button:hover,
+.osd-annotorious-tool-button:hover {
+  background-color: rgba(74, 144, 226, 0.1);
+}
+
+.annotorious-tool-button.active,
+.osd-annotorious-tool-button.active {
+  background-color: #4a90e2;
+  color: #fff;
+}
+
+/* Context menu styles */
+.annotorious-context-menu {
+  min-width: 160px;
+  padding: 8px 0;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.annotorious-context-menu-button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.annotorious-context-menu-button:hover {
+  background-color: rgba(74, 144, 226, 0.1);
+}
+
+/* Label styles */
+.annotorious-label {
+  position: absolute;
+  padding: 4px 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.2s ease;
+}
+
+.annotorious-label::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Editor styles */
+.annotorious-editor {
+  position: absolute;
+  padding: 8px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.annotorious-editor-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: none;
+}
+
+.annotorious-editor-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.annotorious-editor-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.annotorious-editor-button.primary {
+  background-color: #4a90e2;
+  color: #fff;
+}
+
+.annotorious-editor-button.primary:hover {
+  background-color: #357abd;
+}
+
+.annotorious-editor-button.secondary {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.annotorious-editor-button.secondary:hover {
+  background-color: #e8e8e8;
+}
+
+/* Animation keyframes */
+@keyframes annotorious-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes annotorious-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Animation classes */
+.annotorious-fade-in {
+  animation: annotorious-fade-in 0.2s ease forwards;
+}
+
+.annotorious-fade-out {
+  animation: annotorious-fade-out 0.2s ease forwards;
+}

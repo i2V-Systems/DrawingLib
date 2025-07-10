@@ -1,0 +1,10 @@
+<div #viewerContainer class="viewer-container" id="osd-viewer">
+    <!-- OpenSeadragon viewer will be created here -->
+  </div>
+  <div class="toolbar" *ngIf="showToolbar">
+    <button *ngFor="let tool of tools"
+            (click)="activateTool(tool)"
+            [class.active]="tool === activeTool">
+      {{ tool | titlecase }}
+    </button>
+  </div>

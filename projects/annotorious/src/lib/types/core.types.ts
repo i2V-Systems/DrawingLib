@@ -1,0 +1,1 @@
+// The types in this file are already present in shape.types.ts and annotation.types.ts, so this file can be left empty or used for future core-specific types. 

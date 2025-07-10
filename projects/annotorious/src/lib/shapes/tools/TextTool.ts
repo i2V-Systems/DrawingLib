@@ -1,0 +1,229 @@
+import { Tool } from '../../core/tools/Tool';
+import { EventEmitter } from '../../core/events/EventEmitter';
+import { Point } from '../types';
+import { ShapeFactory } from '../base/ShapeFactory';
+import { RectangleShape } from '../RectangleShape';
+
+
+export interface TextAnnotationGeometry {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TextAnnotation {
+  type: 'text';
+  text: string;
+  geometry: TextAnnotationGeometry;
+}
+
+export interface TextToolOptions {
+  minWidth?: number;
+  minHeight?: number;
+  defaultFontSize?: number;
+  defaultFontFamily?: string;
+  defaultColor?: string;
+  defaultBackgroundColor?: string;
+}
+
+export class TextTool extends EventEmitter implements Tool {
+  name = 'text';
+  
+  private svg: SVGSVGElement;
+  private currentShape: RectangleShape | null = null;
+  private startPoint: Point | null = null;
+  private textElement: SVGTextElement | null = null;
+  private onComplete: ((annotation: TextAnnotation) => void) | null = null;
+  private options: Required<TextToolOptions>;
+
+  constructor(
+    svg: SVGSVGElement,
+    onComplete: (annotation: TextAnnotation) => void,
+    options: TextToolOptions = {}
+  ) {
+    super();
+    this.svg = svg;
+    this.onComplete = onComplete;
+    this.options = {
+      minWidth: 50,
+      minHeight: 20,
+      defaultFontSize: 14,
+      defaultFontFamily: 'Arial, sans-serif',
+      defaultColor: '#000000',
+      defaultBackgroundColor: '#ffffff',
+      ...options
+    };
+  }
+
+  activate(): void {
+    // Optional setup when tool is activated
+  }
+
+  deactivate(): void {
+    this.cleanup();
+  }
+
+  handleMouseDown(point: Point, event: MouseEvent): void {
+    if (event.button === 0) { // Left click only
+      this.startPoint = point;
+      
+      // Create initial shape
+      this.currentShape = ShapeFactory.createDefault(
+        `text-${Date.now()}`,
+        'rectangle'
+      ) as RectangleShape;
+      
+      // Add to SVG
+      this.svg.appendChild(this.currentShape.getElement());
+      
+      // Create text element
+      this.textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      this.textElement.setAttribute('class', 'annotorious-text');
+      this.textElement.style.fontSize = `${this.options.defaultFontSize}px`;
+      this.textElement.style.fontFamily = this.options.defaultFontFamily;
+      this.textElement.style.fill = this.options.defaultColor;
+      this.textElement.style.userSelect = 'none';
+      this.textElement.style.pointerEvents = 'none';
+      this.svg.appendChild(this.textElement);
+    }
+  }
+
+  handleMouseMove(point: Point, _event: MouseEvent): void {
+    if (this.startPoint && this.currentShape) {
+      // Calculate rectangle dimensions
+      const x = Math.min(this.startPoint.x, point.x);
+      const y = Math.min(this.startPoint.y, point.y);
+      const width = Math.abs(point.x - this.startPoint.x);
+      const height = Math.abs(point.y - this.startPoint.y);
+      
+      // Update shape
+      this.currentShape.update({ type: 'text', x, y, width, height, text: '' });
+      
+      // Update text position
+      if (this.textElement) {
+        this.textElement.setAttribute('x', (x + 4).toString());
+        this.textElement.setAttribute('y', (y + this.options.defaultFontSize + 4).toString());
+      }
+    }
+  }
+
+  handleMouseUp(point: Point, _event: MouseEvent): void {
+    if (this.startPoint && this.currentShape) {
+      // Update final position and size
+      const x = Math.min(this.startPoint.x, point.x);
+      const y = Math.min(this.startPoint.y, point.y);
+      const width = Math.abs(point.x - this.startPoint.x);
+      const height = Math.abs(point.y - this.startPoint.y);
+      
+      this.currentShape.update({ type: 'text', x, y, width, height, text: '' });
+      
+      // Only complete if the rectangle has sufficient size
+      if (width >= this.options.minWidth && height >= this.options.minHeight) {
+        this.promptForText();
+      } else {
+        this.cleanup();
+      }
+      
+      this.startPoint = null;
+    }
+  }
+
+  handleKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.cleanup();
+    }
+  }
+
+  private promptForText(): void {
+    // Create text input
+    const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    const textArea = document.createElement('textarea');
+    
+    // Style text area
+    textArea.style.width = '100%';
+    textArea.style.height = '100%';
+    textArea.style.border = 'none';
+    textArea.style.padding = '4px';
+    textArea.style.margin = '0';
+    textArea.style.fontSize = `${this.options.defaultFontSize}px`;
+    textArea.style.fontFamily = this.options.defaultFontFamily;
+    textArea.style.color = this.options.defaultColor;
+    textArea.style.backgroundColor = this.options.defaultBackgroundColor;
+    textArea.style.resize = 'none';
+    textArea.style.overflow = 'hidden';
+    
+    // Position foreign object
+    if (this.currentShape) {
+      const bbox = this.currentShape.getElement().getBBox();
+      foreignObject.setAttribute('x', bbox.x.toString());
+      foreignObject.setAttribute('y', bbox.y.toString());
+      foreignObject.setAttribute('width', bbox.width.toString());
+      foreignObject.setAttribute('height', bbox.height.toString());
+    }
+    
+    // Add to SVG
+    foreignObject.appendChild(textArea);
+    this.svg.appendChild(foreignObject);
+    
+    // Focus text area
+    textArea.focus();
+    
+    // Handle text input
+    const handleInput = () => {
+      if (this.textElement) {
+        this.textElement.textContent = textArea.value;
+      }
+    };
+    
+    // Handle completion
+    const handleComplete = () => {
+      const text = textArea.value.trim();
+      if (text && this.currentShape) {
+        // Remove temporary elements
+        this.svg.removeChild(foreignObject);
+        if (this.textElement) {
+          this.svg.removeChild(this.textElement);
+        }
+        
+        // Complete annotation
+        if (this.onComplete) {
+          this.onComplete({
+            type: 'text',
+            text: text,
+            geometry: this.currentShape.getGeometry() as TextAnnotationGeometry
+          });
+        }
+        
+        this.currentShape = null;
+        this.textElement = null;
+      } else {
+        this.cleanup();
+      }
+    };
+    
+    // Add event listeners
+    textArea.addEventListener('input', handleInput);
+    textArea.addEventListener('blur', handleComplete);
+    textArea.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter' && !evt.shiftKey) {
+        evt.preventDefault();
+        handleComplete();
+      } else if (evt.key === 'Escape') {
+        this.cleanup();
+      }
+    });
+  }
+
+  private cleanup(): void {
+    if (this.currentShape) {
+      this.currentShape.destroy();
+      this.currentShape = null;
+    }
+    if (this.textElement && this.textElement.parentNode) {
+      this.textElement.parentNode.removeChild(this.textElement);
+      this.textElement = null;
+    }
+    this.startPoint = null;
+  }
+}

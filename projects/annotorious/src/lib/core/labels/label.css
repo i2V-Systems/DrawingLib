@@ -1,0 +1,56 @@
+.annotorious-label-group {
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.annotorious-label-bg {
+  fill: #fff;
+  stroke: #000;
+  stroke-width: 1px;
+  opacity: 0.9;
+  rx: 2px;
+  ry: 2px;
+  transition: all 0.2s ease;
+}
+
+.annotorious-label-text {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  fill: #000;
+  user-select: none;
+}
+
+/* Label states */
+.annotorious-label-group[data-state="selected"] {
+  cursor: move;
+}
+
+.annotorious-label-group[data-state="selected"] .annotorious-label-bg {
+  fill: #ffeb3b;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.annotorious-label-group:hover .annotorious-label-bg {
+  fill: #e3f2fd;
+}
+
+.annotorious-label-group[data-state="selected"]:hover .annotorious-label-bg {
+  fill: #fff176;
+}
+
+/* Label positions */
+.annotorious-label-group[data-position="top"] {
+  transform-origin: bottom center;
+}
+
+.annotorious-label-group[data-position="bottom"] {
+  transform-origin: top center;
+}
+
+.annotorious-label-group[data-position="left"] {
+  transform-origin: right center;
+}
+
+.annotorious-label-group[data-position="right"] {
+  transform-origin: left center;
+}
