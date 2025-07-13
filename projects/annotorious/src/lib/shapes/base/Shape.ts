@@ -1,5 +1,5 @@
-import { Geometry } from '../types';
-import { Point } from '../types';
+import { Geometry } from '../../types/shape.types';
+import { Point } from '../../types/shape.types';
 import { ShapeStyle } from '../../core/style/StyleManager';
 
 interface ShapeEvents {
@@ -7,6 +7,7 @@ interface ShapeEvents {
   deselect: { id: string };
   hover: { id: string };
   unhover: { id: string };
+  geometryChanged: { geometry: Geometry };
 }
 
 export interface Shape {
@@ -49,6 +50,31 @@ export interface Shape {
    * Destroy the shape and clean up
    */
   destroy(): void;
+
+  /**
+   * Enable editing mode for the shape
+   */
+  enableEditing(): void;
+
+  /**
+   * Disable editing mode for the shape
+   */
+  disableEditing(): void;
+
+  /**
+   * Check if shape is in editing mode
+   */
+  isEditing(): boolean;
+
+  /**
+   * Move the shape by delta
+   */
+  moveBy(deltaX: number, deltaY: number): void;
+
+  /**
+   * Get edit handles for the shape
+   */
+  getEditHandles(): { x: number; y: number; type: string }[];
 
   /**
    * Add event listener

@@ -1,11 +1,14 @@
 import { Tool } from '../../core/tools/Tool';
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { Point } from '../types';
+import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { EllipseShape } from '../EllipseShape';
 
 export class EllipseTool extends EventEmitter implements Tool {
   name = 'ellipse';
+  capabilities = {
+    supportsMouse: true
+  };
   
   private svg: SVGSVGElement;
   private currentShape: EllipseShape | null = null;
@@ -21,7 +24,8 @@ export class EllipseTool extends EventEmitter implements Tool {
   }
 
   activate(): void {
-    // Optional setup when tool is activated
+    // Tool is now activated - no need to add event listeners
+    // The ToolManager will handle all events and delegate to this tool
   }
 
   deactivate(): void {
@@ -91,11 +95,7 @@ export class EllipseTool extends EventEmitter implements Tool {
     }
   }
 
-  handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      this.cleanup();
-    }
-  }
+
 
   private startDrawing(point: Point): void {
     this.startPoint = point;
@@ -119,4 +119,8 @@ export class EllipseTool extends EventEmitter implements Tool {
     this.startPoint = null;
     this.isRotating = false;
   }
+
+
+
+
 }

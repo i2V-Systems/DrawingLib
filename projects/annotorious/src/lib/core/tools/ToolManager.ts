@@ -1,5 +1,5 @@
 import { EventEmitter } from '../events/EventEmitter';
-import { Point } from '../../shapes/types';
+import { Point } from '../../types/shape.types';
 import { Tool, ToolName } from './Tool';
 
 /**
@@ -28,27 +28,117 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   private tools: Map<ToolName, Tool>;
   private state: ToolState;
   private enabled: boolean;
+  private svg: SVGSVGElement;
+  private eventListeners: {
+    mousedown: (event: MouseEvent) => void;
+    mousemove: (event: MouseEvent) => void;
+    mouseup: (event: MouseEvent) => void;
+    dblclick: (event: MouseEvent) => void;
+  };
 
-  constructor() {
+  constructor(svg: SVGSVGElement) {
     super();
     
+    this.svg = svg;
     this.tools = new Map();
     this.state = {
       activeTool: null,
       isDrawing: false
     };
     this.enabled = true;
+    
+    // Store event listener references for cleanup
+    this.eventListeners = {
+      mousedown: this.handleSvgMouseDown.bind(this),
+      mousemove: this.handleSvgMouseMove.bind(this),
+      mouseup: this.handleSvgMouseUp.bind(this),
+      dblclick: this.handleSvgDoubleClick.bind(this)
+    };
+  }
+
+  /**
+   * Add event listeners when a tool becomes active
+   */
+  private addEventListeners(): void {
+    this.svg.addEventListener('mousedown', this.eventListeners.mousedown);
+    this.svg.addEventListener('mousemove', this.eventListeners.mousemove);
+    this.svg.addEventListener('mouseup', this.eventListeners.mouseup);
+    this.svg.addEventListener('dblclick', this.eventListeners.dblclick);
+  }
+
+  /**
+   * Remove event listeners when no tool is active
+   */
+  private removeEventListeners(): void {
+    this.svg.removeEventListener('mousedown', this.eventListeners.mousedown);
+    this.svg.removeEventListener('mousemove', this.eventListeners.mousemove);
+    this.svg.removeEventListener('mouseup', this.eventListeners.mouseup);
+    this.svg.removeEventListener('dblclick', this.eventListeners.dblclick);
+  }
+
+  /**
+   * SVG event handlers
+   */
+  private handleSvgMouseDown(event: MouseEvent): void {
+    if (this.enabled && this.state.isDrawing) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = this.getMousePosition(event);
+      this.handleMouseDown(point, event);
+    }
+  }
+
+  private handleSvgMouseMove(event: MouseEvent): void {
+    if (this.enabled && this.state.isDrawing) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = this.getMousePosition(event);
+      this.handleMouseMove(point, event);
+    }
+  }
+
+  private handleSvgMouseUp(event: MouseEvent): void {
+    if (this.enabled && this.state.isDrawing) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = this.getMousePosition(event);
+      this.handleMouseUp(point, event);
+    }
+  }
+
+  private handleSvgDoubleClick(event: MouseEvent): void {
+    if (this.enabled && this.state.isDrawing) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = this.getMousePosition(event);
+      this.handleDoubleClick(point, event);
+    }
   }
 
   /**
    * Register a tool
    */
   registerTool(tool: Tool): void {
+    if (!tool || typeof tool !== 'object') {
+      this.emit('error', { message: 'Invalid tool provided' });
+      return;
+    }
+
+    if (!tool.name || typeof tool.name !== 'string') {
+      this.emit('error', { message: 'Tool must have a valid name' });
+      return;
+    }
+
     if (this.tools.has(tool.name)) {
       this.emit('error', { message: `Tool with name '${tool.name}' already exists` });
       return;
     }
-    this.tools.set(tool.name, tool);
+
+    try {
+      this.tools.set(tool.name, tool);
+    } catch (error) {
+      this.emit('error', { message: `Failed to register tool '${tool.name}': ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
   }
 
   /**
@@ -67,6 +157,11 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   activateTool(name: ToolName): void {
     if (!this.enabled) return;
 
+    if (!name || typeof name !== 'string') {
+      this.emit('error', { message: 'Invalid tool name provided' });
+      return;
+    }
+
     const tool = this.tools.get(name);
     if (!tool) {
       this.emit('error', { message: `Tool '${name}' not found` });
@@ -74,10 +169,16 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     }
 
     if (tool !== this.state.activeTool) {
-      this.deactivateActiveTool();
-      this.state.activeTool = tool;
-      tool.activate();
-      this.emit('toolActivated', { tool });
+      try {
+        this.deactivateActiveTool();
+        this.state.activeTool = tool;
+        tool.activate();
+        // Add event listeners when tool is activated
+        this.addEventListeners();
+        this.emit('toolActivated', { tool });
+      } catch (error) {
+        this.emit('error', { message: `Failed to activate tool '${name}': ${error instanceof Error ? error.message : 'Unknown error'}` });
+      }
     }
   }
 
@@ -87,8 +188,10 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   deactivateActiveTool(): void {
     if (this.state.activeTool) {
       const tool = this.state.activeTool;
-      this.state.activeTool.deactivate();
+      tool.deactivate();
       this.state.activeTool = null;
+      // Remove event listeners when tool is deactivated
+      this.removeEventListeners();
       this.emit('toolDeactivated', { tool });
     }
   }
@@ -162,25 +265,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     }
   }
 
-  /**
-   * Handle key down event
-   */
-  handleKeyDown(event: KeyboardEvent): void {
-    if (!this.enabled) return;
-    if (this.state.activeTool?.capabilities?.supportsKeyboard) {
-      this.state.activeTool.handleKeyDown?.(event);
-    }
-  }
 
-  /**
-   * Handle key up event
-   */
-  handleKeyUp(event: KeyboardEvent): void {
-    if (!this.enabled) return;
-    if (this.state.activeTool?.capabilities?.supportsKeyboard) {
-      this.state.activeTool.handleKeyUp?.(event);
-    }
-  }
 
   /**
    * Get current tool state
@@ -208,6 +293,19 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
    */
   getTools(): Tool[] {
     return Array.from(this.tools.values());
+  }
+
+
+
+  /**
+   * Get mouse position in SVG coordinates
+   */
+  private getMousePosition(event: MouseEvent): Point {
+    const rect = this.svg.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
   }
 
   /**

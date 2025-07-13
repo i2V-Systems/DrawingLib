@@ -1,20 +1,19 @@
 import { Tool } from '../../core/tools/Tool';
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { Point } from '../types';
+import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { PolygonShape } from '../PolygonShape';
 
 export class PolygonTool extends EventEmitter implements Tool {
   capabilities = {
-    supportsMouse: true,
-    supportsKeyboard: true
+    supportsMouse: true
   };
   name = 'polygon';
   
   private svg: SVGSVGElement;
   private currentShape: PolygonShape | null = null;
   private points: Point[] = [];
-  private isDrawing = false;
+  private isCurrentlyDrawing = false;
   private onComplete: (shape: PolygonShape) => void;
   private minPoints = 3;
   private snapDistance = 20;
@@ -26,22 +25,28 @@ export class PolygonTool extends EventEmitter implements Tool {
     this.onComplete = onComplete;
   }
 
-  handleMouseDown = (event: MouseEvent): void => {
-    const point = this.getMousePosition(event);
+  activate(): void {
+    // Tool is now activated - no need to add event listeners
+    // The ToolManager will handle all events and delegate to this tool
+  }
+
+  deactivate(): void {
+    // Cleanup any remaining drawing state
+    this.cleanup();
+  }
+
+  handleMouseDown(point: Point, event: MouseEvent): void {
     if (event.button === 0) { // Left click only
-      if (!this.isDrawing) {
+      if (!this.isCurrentlyDrawing) {
         this.startDrawing(point);
       } else {
         this.addPoint(point);
       }
-    } else if (event.button === 2) { // Right click
-      this.completeShape();
     }
   }
 
-  handleMouseMove = (event: MouseEvent): void => {
-    const point = this.getMousePosition(event);
-    if (this.isDrawing && this.currentShape) {
+  handleMouseMove(point: Point, _event: MouseEvent): void {
+    if (this.isCurrentlyDrawing && this.currentShape) {
       // Update the last point (preview line)
       const points = [...this.points, point];
       this.currentShape.update({ type: 'polygon', points });
@@ -56,8 +61,7 @@ export class PolygonTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseUp = (event: MouseEvent): void => {
-    const point = this.getMousePosition(event);
+  handleMouseUp(point: Point, event: MouseEvent): void {
     if (event.button === 0) { // Left click only
       // Check for double click
       if (this.doubleClickTimeout !== null) {
@@ -72,34 +76,12 @@ export class PolygonTool extends EventEmitter implements Tool {
     }
   }
 
-  handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      this.cleanup();
-    } else if (event.key === 'Enter') {
-      this.completeShape();
-    }
-  }
-
-  activate(): void {
-    // Attach event listeners when tool is activated
-
-  }
-
-  deactivate(): void {
-    // Cleanup any remaining drawing state
-    this.cleanup();
-  }
-
-  private getMousePosition(event: MouseEvent): Point {
-    const rect = this.svg.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
+  isDrawing(): boolean {
+    return this.isCurrentlyDrawing;
   }
 
   private startDrawing(point: Point): void {
-    this.isDrawing = true;
+    this.isCurrentlyDrawing = true;
     this.points = [point];
     
     // Create initial shape
@@ -133,7 +115,7 @@ export class PolygonTool extends EventEmitter implements Tool {
   }
 
   private completeShape(): void {
-    if (this.isDrawing && this.currentShape && this.points.length >= this.minPoints) {
+    if (this.isCurrentlyDrawing && this.currentShape && this.points.length >= this.minPoints) {
       // Update the shape with final points
       const points = [...this.points];
       if (!this.isNearPoint(points[points.length - 1], points[0])) {
@@ -176,7 +158,7 @@ export class PolygonTool extends EventEmitter implements Tool {
     }
     
     this.points = [];
-    this.isDrawing = false;
+    this.isCurrentlyDrawing = false;
     
     // Clear double click timeout
     if (this.doubleClickTimeout !== null) {
@@ -184,4 +166,6 @@ export class PolygonTool extends EventEmitter implements Tool {
       this.doubleClickTimeout = null;
     }
   }
+
+
 }

@@ -1,5 +1,5 @@
 import { EventEmitter } from '../events/EventEmitter';
-import { Point } from '../../shapes/types';
+import { Point } from '../../types/shape.types';
 // import labelStyles from './label.css?inline';
 
 interface LabelManagerEvents {
@@ -70,7 +70,7 @@ export class LabelManager extends EventEmitter<LabelManagerEvents> {
     if (!labelGroup) {
       // Create new label group
       labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      labelGroup.setAttribute('class', 'annotorious-label-group');
+      labelGroup.setAttribute('class', 'annotation-label-group');
       labelGroup.setAttribute('data-position', opts.position || 'top');
       this.svg.appendChild(labelGroup);
       this.labels.set(id, labelGroup);
@@ -186,12 +186,12 @@ export class LabelManager extends EventEmitter<LabelManagerEvents> {
 
     // Create background rectangle
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('class', 'annotorious-label-bg');
+    bg.setAttribute('class', 'annotation-label-bg');
     group.appendChild(bg);
 
     // Create text element
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('class', 'annotorious-label-text');
+    text.setAttribute('class', 'annotation-label-text');
     text.textContent = options.text;
     if (options.className) {
       text.classList.add(options.className);

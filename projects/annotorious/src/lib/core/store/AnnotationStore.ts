@@ -1,5 +1,5 @@
 import { EventEmitter } from '../events/EventEmitter';
-import { Annotation, AnnotationBody } from '../annotation/types';
+import { Annotation, AnnotationBody } from '../../types/annotation.types';
 
 /**
  * Store action types

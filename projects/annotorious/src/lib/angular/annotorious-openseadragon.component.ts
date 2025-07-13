@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectorRef, AfterViewInit, NgZone } from '@angular/core';
 import OpenSeadragon from 'openseadragon';
-import { OpenSeadragonAnnotator } from '../openseadragon/OpenSeadragonAnnotator';
-import { AnnotationEvent } from '../core/annotation/types';
+import { OpenSeadragonAnnotator } from '../core/OpenSeadragonAnnotator';
+import { AnnotationEvent } from '../types/annotation.types';
 import { Theme, lightTheme, darkTheme } from '../core/style/StyleManager';
 
 @Component({
@@ -9,7 +9,6 @@ import { Theme, lightTheme, darkTheme } from '../core/style/StyleManager';
   templateUrl: './annotorious-openseadragon.component.html'
 })
 export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('viewerContainer', { static: true }) viewerContainer!: ElementRef;
   private viewer!: OpenSeadragon.Viewer;
   private annotator!: OpenSeadragonAnnotator;
   @Input() viewerId: string = 'seadragon-viewer';
@@ -24,6 +23,13 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   @Output() annotationCreated = new EventEmitter<AnnotationEvent>();
   @Output() annotationUpdated = new EventEmitter<AnnotationEvent>();
   @Output() annotationDeleted = new EventEmitter<AnnotationEvent>();
+  @Output() annotationSelected = new EventEmitter<any>();
+  @Output() annotationDeselected = new EventEmitter<any>();
+  @Output() editingStarted = new EventEmitter<any>();
+  @Output() editingStopped = new EventEmitter<any>();
+  @Output() shapeMoved = new EventEmitter<any>();
+  @Output() shapeResized = new EventEmitter<any>();
+  @Output() labelSelected = new EventEmitter<any>();
 
   tools: string[] = [];
   activeTool: string | null = null;
@@ -34,7 +40,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
     // Initialize OpenSeadragon viewer outside Angular zone
     this.ngZone.runOutsideAngular(() => {
       this.viewer = OpenSeadragon({
-        id: 'osd-viewer',
+        id: this.viewerId,
         prefixUrl: 'assets/openseadragon/images/',
         tileSources: this.imageSource,
         defaultZoomLevel : 1,
@@ -48,7 +54,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
           clickToZoom: false,
           dblClickToZoom: false
         },
-        visibilityRatio: 1
+        visibilityRatio: 1,
       });
     });
   }
@@ -58,11 +64,9 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
     this.viewer.addHandler('open', () => {
       this.ngZone.runOutsideAngular(() => {
         // Use the OpenSeadragon viewer's canvas or container as the annotation container
-        const osdContainer = this.viewer.canvas || this.viewer.container;
         this.annotator = new OpenSeadragonAnnotator({
           viewer: this.viewer,
           theme: this.theme,
-          container: osdContainer
         });
         // Initialize toolbar tools and emit events inside Angular zone
         this.ngZone.run(() => {
@@ -70,14 +74,35 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
           this.activeTool = this.annotator.getActiveTool();
           this.cdr.detectChanges();
           // Add event listeners
-          this.annotator.on('createAnnotation', (evt: AnnotationEvent) => {
+          this.annotator.on('create', (evt: AnnotationEvent) => {
             this.annotationCreated.emit(evt);
           });
-          this.annotator.on('updateAnnotation', (evt: AnnotationEvent) => {
+          this.annotator.on('update', (evt: AnnotationEvent) => {
             this.annotationUpdated.emit(evt);
           });
-          this.annotator.on('deleteAnnotation', (evt: AnnotationEvent) => {
+          this.annotator.on('delete', (evt: AnnotationEvent) => {
             this.annotationDeleted.emit(evt);
+          });
+          this.annotator.on('select', (evt: any) => {
+            this.annotationSelected.emit(evt);
+          });
+          this.annotator.on('deselect', (evt: any) => {
+            this.annotationDeselected.emit(evt);
+          });
+          this.annotator.on('editingStarted', (evt: any) => {
+            this.editingStarted.emit(evt);
+          });
+          this.annotator.on('editingStopped', (evt: any) => {
+            this.editingStopped.emit(evt);
+          });
+          this.annotator.on('shapeMoved', (evt: any) => {
+            this.shapeMoved.emit(evt);
+          });
+          this.annotator.on('shapeResized', (evt: any) => {
+            this.shapeResized.emit(evt);
+          });
+          this.annotator.on('labelSelected', (evt: any) => {
+            this.labelSelected.emit(evt);
           });
         });
       });

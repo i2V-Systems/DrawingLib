@@ -1,5 +1,5 @@
 import { BaseShape } from './base/BaseShape';
-import { Geometry } from './types';
+import { Geometry } from '../types/shape.types';
 import { SVGUtils } from '../utils/SVGUtils';
 
 export class CircleShape extends BaseShape {

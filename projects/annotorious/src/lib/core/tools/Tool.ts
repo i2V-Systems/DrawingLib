@@ -1,4 +1,4 @@
-import { Point } from '../../shapes/types';
+import { Point } from '../../types/shape.types';
 
 /**
  * Supported tool names
@@ -10,7 +10,6 @@ export type ToolName = 'select' | 'rectangle' | 'polygon' | 'circle' | 'point' |
  */
 export interface ToolCapabilities {
   supportsMouse?: boolean;
-  supportsKeyboard?: boolean;
   supportsEnableDisable?: boolean;
 }
 
@@ -29,12 +28,12 @@ export interface Tool {
   capabilities?: ToolCapabilities;
 
   /**
-   * Activate the tool
+   * Activate the tool and attach event listeners (tools should use their own svg reference)
    */
   activate(): void;
 
   /**
-   * Deactivate the tool
+   * Deactivate the tool and detach event listeners (tools should use their own svg reference)
    */
   deactivate(): void;
 
@@ -53,15 +52,7 @@ export interface Tool {
    */
   handleMouseUp?(point: Point, event: MouseEvent): void;
 
-  /**
-   * Handle key down event
-   */
-  handleKeyDown?(event: KeyboardEvent): void;
 
-  /**
-   * Handle key up event
-   */
-  handleKeyUp?(event: KeyboardEvent): void;
 
   /**
    * Enable or disable the tool

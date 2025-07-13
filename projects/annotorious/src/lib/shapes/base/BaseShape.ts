@@ -1,6 +1,6 @@
 import { EventEmitter } from '../../core/events/EventEmitter';
 import { ShapeStyle } from '../../core/style/StyleManager';
-import { Geometry, Point } from '../types';
+import { Geometry, Point } from '../../types/shape.types';
 import { SVGUtils } from '../../utils/SVGUtils';
 import { Shape } from './Shape';
 
@@ -9,6 +9,7 @@ interface ShapeEvents {
   deselect: { id: string };
   hover: { id: string };
   unhover: { id: string };
+  geometryChanged: { geometry: Geometry };
 }
 
 export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Shape {
@@ -102,7 +103,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.element.setAttribute('fill', 'none');
     this.element.setAttribute('stroke', '#000');
     this.element.setAttribute('stroke-width', '2');
-    this.element.classList.add('annotorious-shape');
+    this.element.classList.add('annotation-shape');
   }
 
   /**
@@ -168,5 +169,64 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
         this.element.style.strokeDasharray = style.strokeDasharray;
       }
     }
+  }
+
+  /**
+   * Enable editing mode for the shape
+   */
+  enableEditing(): void {
+    this.element.classList.add('editing');
+    this.showEditHandles();
+  }
+
+  /**
+   * Disable editing mode for the shape
+   */
+  disableEditing(): void {
+    this.element.classList.remove('editing');
+    this.hideEditHandles();
+  }
+
+  /**
+   * Show edit handles (resize, move, etc.)
+   */
+  protected showEditHandles(): void {
+    // Override in subclasses to show specific handles
+  }
+
+  /**
+   * Hide edit handles
+   */
+  protected hideEditHandles(): void {
+    // Override in subclasses to hide specific handles
+  }
+
+  /**
+   * Check if shape is in editing mode
+   */
+  isEditing(): boolean {
+    return this.element.classList.contains('editing');
+  }
+
+  /**
+   * Move the shape by delta
+   */
+  moveBy(deltaX: number, deltaY: number): void {
+    // Override in subclasses to implement specific move logic
+  }
+
+  /**
+   * Resize the shape
+   */
+  resize(newWidth: number, newHeight: number): void {
+    // Override in subclasses to implement specific resize logic
+  }
+
+  /**
+   * Get edit handles for the shape
+   */
+  getEditHandles(): { x: number; y: number; type: string }[] {
+    // Override in subclasses to return specific handles
+    return [];
   }
 }

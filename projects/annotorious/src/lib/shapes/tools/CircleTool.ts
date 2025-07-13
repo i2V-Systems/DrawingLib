@@ -1,11 +1,14 @@
 import { Tool } from '../../core/tools/Tool';
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { Point } from '../types';
+import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { CircleShape } from '../CircleShape';
 
 export class CircleTool extends EventEmitter implements Tool {
   name = 'circle';
+  capabilities = {
+    supportsMouse: true
+  };
   
   private svg: SVGSVGElement;
   private currentShape: CircleShape | null = null;
@@ -20,7 +23,8 @@ export class CircleTool extends EventEmitter implements Tool {
   }
 
   activate(): void {
-    // Optional setup when tool is activated
+    // Tool is now activated - no need to add event listeners
+    // The ToolManager will handle all events and delegate to this tool
   }
 
   deactivate(): void {
@@ -73,11 +77,7 @@ export class CircleTool extends EventEmitter implements Tool {
     }
   }
 
-  handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      this.cleanup();
-    }
-  }
+
 
   private calculateRadius(center: Point, point: Point): number {
     const dx = point.x - center.x;
@@ -92,4 +92,8 @@ export class CircleTool extends EventEmitter implements Tool {
     }
     this.center = null;
   }
+
+
+
+
 }

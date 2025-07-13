@@ -1,5 +1,5 @@
 import { BaseShape } from './base/BaseShape';
-import { Geometry } from './types';
+import { Geometry } from '../types/shape.types';
 
 export class RectangleShape extends BaseShape {
   private rect: SVGRectElement;

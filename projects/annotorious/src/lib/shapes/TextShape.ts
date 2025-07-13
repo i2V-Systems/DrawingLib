@@ -1,5 +1,5 @@
 import { BaseShape } from './base/BaseShape';
-import { Geometry, TextGeometry } from './types';
+import { Geometry, TextGeometry } from '../types/shape.types';
 
 export class TextShape extends BaseShape {
   private text: SVGTextElement;

@@ -1,8 +1,10 @@
 import { EventEmitter } from '../events/EventEmitter';
-import { Annotation } from '../annotation/types';
+import { Annotation } from '../../types/annotation.types';
 import { Shape } from '../../shapes/base';
 import { StyleManager } from '../style/StyleManager';
 import { SpatialIndex, SpatialItem } from './SpatialIndex';
+import { HitDetection } from '../../utils/HitDetection';
+import { Point } from '../../types/shape.types';
 
 interface AnnotationStateEvents {
   create: { annotation: Annotation };
@@ -149,6 +151,18 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return this.annotations.get(id);
   }
 
+  getShape(id: string): Shape | undefined {
+    return this.shapes.get(id);
+  }
+
+  getSelectedAnnotation(): { id: string; annotation: Annotation } | null {
+    if (this.selectedId) {
+      const annotation = this.annotations.get(this.selectedId);
+      return annotation ? { id: this.selectedId, annotation } : null;
+    }
+    return null;
+  }
+
   getAll(): Annotation[] {
     return Array.from(this.annotations.values());
   }
@@ -167,6 +181,38 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   queryAtPoint(point: { x: number; y: number }): string[] {
     const hits = this.spatialIndex.search(point);
     return hits.map(item => item.id);
+  }
+
+  /**
+   * Find the best hit annotation at a given point using precise hit detection
+   */
+  findHitAnnotation(point: Point, tolerance: number = 5): { id: string; distance: number } | null {
+    // First, get candidates using spatial index
+    const candidates = this.spatialIndex.search(point);
+    
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    let bestHit: { id: string; distance: number } | null = null;
+    let minDistance = Infinity;
+
+    // Test each candidate with precise hit detection
+    for (const candidate of candidates) {
+      const annotation = this.annotations.get(candidate.id);
+      if (!annotation || !annotation.target?.selector?.geometry) {
+        continue;
+      }
+
+      const hitResult = HitDetection.hitTest(point, annotation.target.selector.geometry, tolerance);
+      
+      if (hitResult.hit && hitResult.distance < minDistance) {
+        minDistance = hitResult.distance;
+        bestHit = { id: candidate.id, distance: hitResult.distance };
+      }
+    }
+
+    return bestHit;
   }
 
   /**

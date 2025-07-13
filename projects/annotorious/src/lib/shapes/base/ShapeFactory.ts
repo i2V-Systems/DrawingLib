@@ -4,13 +4,23 @@ import { PolygonShape } from '../PolygonShape';
 import { CircleShape } from '../CircleShape';
 import { EllipseShape } from '../EllipseShape';
 import { TextShape } from '../TextShape';
-import { Geometry } from '../types';
+import { PointShape } from '../PointShape';
+import { FreehandShape } from '../FreehandShape';
+import { Geometry, PointGeometry, FreehandGeometry } from '../../types/shape.types';
 
 export class ShapeFactory {
   /**
    * Create a default shape of the specified type
    */
   static createDefault(id: string, type: string): BaseShape {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid shape ID provided');
+    }
+
+    if (!type || typeof type !== 'string') {
+      throw new Error('Invalid shape type provided');
+    }
+
     // Create default geometry for each shape type
     let geometry: Geometry;
     switch (type) {
@@ -61,35 +71,76 @@ export class ShapeFactory {
         };
         break;
       
+      case 'point':
+        geometry = {
+          type: 'point',
+          x: 0,
+          y: 0
+        };
+        break;
+      
+      case 'freehand':
+        geometry = {
+          type: 'freehand',
+          points: []
+        };
+        break;
+      
       default:
         throw new Error(`Unsupported shape type: ${type}`);
     }
     
-    return ShapeFactory.createFromGeometry(id, geometry);
+    try {
+      return ShapeFactory.createFromGeometry(id, geometry);
+    } catch (error) {
+      throw new Error(`Failed to create shape of type '${type}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * Create a shape from a geometry object
    */
   static createFromGeometry(id: string, geometry: Geometry): BaseShape {
-    switch (geometry.type) {
-      case 'rectangle':
-        return new RectangleShape(id, geometry);
+    if (!id || typeof id !== 'string') {
+      throw new Error('Invalid shape ID provided');
+    }
+
+    if (!geometry || typeof geometry !== 'object') {
+      throw new Error('Invalid geometry provided');
+    }
+
+    if (!geometry.type || typeof geometry.type !== 'string') {
+      throw new Error('Invalid geometry type provided');
+    }
+
+    try {
+      switch (geometry.type) {
+        case 'rectangle':
+          return new RectangleShape(id, geometry);
+        
+        case 'polygon':
+          return new PolygonShape(id, geometry);
+        
+        case 'circle':
+          return new CircleShape(id, geometry);
+        
+        case 'ellipse':
+          return new EllipseShape(id, geometry);
+        
+        case 'text':
+          return new TextShape(id, geometry);
+        
+        case 'point':
+          return new PointShape(geometry as PointGeometry);
       
-      case 'polygon':
-        return new PolygonShape(id, geometry);
+        case 'freehand':
+          return new FreehandShape(id, geometry as FreehandGeometry);
       
-      case 'circle':
-        return new CircleShape(id, geometry);
-      
-      case 'ellipse':
-        return new EllipseShape(id, geometry);
-      
-      case 'text':
-        return new TextShape(id, geometry);
-      
-      default:
-        throw new Error(`Unsupported geometry type: ${(geometry as any).type}`);
+        default:
+          throw new Error(`Unsupported geometry type: null`);
+      }
+    } catch (error) {
+      throw new Error(`Failed to create shape from geometry: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

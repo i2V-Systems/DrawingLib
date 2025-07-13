@@ -1,5 +1,5 @@
 import { BaseShape } from './base/BaseShape';
-import { Point, PointGeometry, Geometry } from './types';
+import { Point, PointGeometry, Geometry } from '../types/shape.types';
 
 export class PointShape extends BaseShape {
   private geometry: PointGeometry;
@@ -8,7 +8,7 @@ export class PointShape extends BaseShape {
   constructor(geometry: PointGeometry) {
     // Create SVG group element
     const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    element.setAttribute('class', 'a9s-point');
+    element.setAttribute('class', 'annotation-point');
     
     // Create unique ID
     const id = crypto.randomUUID();

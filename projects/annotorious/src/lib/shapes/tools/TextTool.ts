@@ -1,6 +1,6 @@
 import { Tool } from '../../core/tools/Tool';
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { Point } from '../types';
+import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { RectangleShape } from '../RectangleShape';
 
@@ -29,6 +29,9 @@ export interface TextToolOptions {
 
 export class TextTool extends EventEmitter implements Tool {
   name = 'text';
+  capabilities = {
+    supportsMouse: true
+  };
   
   private svg: SVGSVGElement;
   private currentShape: RectangleShape | null = null;
@@ -57,7 +60,8 @@ export class TextTool extends EventEmitter implements Tool {
   }
 
   activate(): void {
-    // Optional setup when tool is activated
+    // Tool is now activated - no need to add event listeners
+    // The ToolManager will handle all events and delegate to this tool
   }
 
   deactivate(): void {
@@ -79,7 +83,7 @@ export class TextTool extends EventEmitter implements Tool {
       
       // Create text element
       this.textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      this.textElement.setAttribute('class', 'annotorious-text');
+      this.textElement.setAttribute('class', 'annotation-text');
       this.textElement.style.fontSize = `${this.options.defaultFontSize}px`;
       this.textElement.style.fontFamily = this.options.defaultFontFamily;
       this.textElement.style.fill = this.options.defaultColor;
@@ -129,11 +133,7 @@ export class TextTool extends EventEmitter implements Tool {
     }
   }
 
-  handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      this.cleanup();
-    }
-  }
+
 
   private promptForText(): void {
     // Create text input
@@ -226,4 +226,8 @@ export class TextTool extends EventEmitter implements Tool {
     }
     this.startPoint = null;
   }
+
+
+
+
 }

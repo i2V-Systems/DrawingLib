@@ -1,11 +1,14 @@
 import { Tool } from '../../core/tools/Tool';
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { Point } from '../types';
+import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { RectangleShape } from '../RectangleShape';
 
 export class RectangleTool extends EventEmitter implements Tool {
   name = 'rectangle';
+  capabilities = {
+    supportsMouse: true
+  };
   
   private svg: SVGSVGElement;
   private currentShape: RectangleShape | null = null;
@@ -19,7 +22,8 @@ export class RectangleTool extends EventEmitter implements Tool {
   }
 
   activate(): void {
-    // Optional setup when tool is activated
+    // Tool is now activated - no need to add event listeners
+    // The ToolManager will handle all events and delegate to this tool
   }
 
   deactivate(): void {
@@ -76,4 +80,6 @@ export class RectangleTool extends EventEmitter implements Tool {
     }
     this.startPoint = null;
   }
+
+
 }

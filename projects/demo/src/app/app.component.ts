@@ -13,7 +13,7 @@ import { darkTheme } from '../../../annotorious/src/lib/core/style/StyleManager'
 })
 export class AppComponent {
   title = 'demo';
-  dziUrl = { type: 'image', url : 'https://images.pexels.com/photos/32920370/pexels-photo-32920370.jpeg'};
+  dziUrl = { type: 'image', url : '/demo.jpg'};
   theme = darkTheme;
 
   onAnnotationCreated(event: AnnotationEvent) {
@@ -26,5 +26,33 @@ export class AppComponent {
 
   onAnnotationDeleted(event: AnnotationEvent) {
     console.log('Annotation deleted:', event);
+  }
+
+  onAnnotationSelected(event: any) {
+    console.log('Annotation selected:', event);
+  }
+
+  onAnnotationDeselected(event: any) {
+    console.log('Annotation deselected:', event);
+  }
+
+  onEditingStarted(event: any) {
+    console.log('Editing started:', event);
+  }
+
+  onEditingStopped(event: any) {
+    console.log('Editing stopped:', event);
+  }
+
+  onShapeMoved(event: any) {
+    console.log('Shape moved:', event);
+  }
+
+  onShapeResized(event: any) {
+    console.log('Shape resized:', event);
+  }
+
+  onLabelSelected(event: any) {
+    console.log('Label selected:', event);
   }
 }

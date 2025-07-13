@@ -1,6 +1,6 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Shape } from '../../shapes/base';
-import { Point } from '../../shapes/types';
+import { Point } from '../../types/shape.types';
 
 interface SelectionManagerEvents {
   select: { id: string; shape: Shape };

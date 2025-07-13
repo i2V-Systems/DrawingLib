@@ -1,17 +1,26 @@
 // Core exports
-export * from './core/annotation';
+export type { Annotation, AnnotationBody, AnnotationTarget, AnnotationSelector, BodyPurpose, TextBody, TagBody, ClassificationBody, LinkBody } from './types/annotation.types';
 export * from './core/events';
 export * from './core/state';
 export * from './core/labels/LabelManager';
-export * from './core/filters/FilterManager';
-export * from './core/groups/GroupManager';
+export * from './core/selection/SelectionManager';
+
+export * from './core/tools';
+export * from './core/style';
+export * from './core/editing';
+export * from './core/store';
+
+// Crosshair exports
+export { Crosshair } from './core/Crosshair';
+export type { CrosshairConfig } from './core/Crosshair';
+
+// Touch utilities
+export { isTouchDevice, enableTouchTranslation } from './utils/Touch';
 
 // Shape exports
 export * from './shapes/base';
-export * from './shapes/selectors';
-export * from './shapes/types';
-export * from './shapes/tools/TextTool';
-export * from './shapes/tools/GroupTool';
+export type * from './types/shape.types';
+export * from './shapes/tools';
 
 
 // Angular Components
@@ -22,5 +31,4 @@ export * from './angular/types';
 export * from './utils';
 
 // Main Annotator class
-export { Annotator } from './core/Annotator';
-export { OpenSeadragonAnnotator } from './openseadragon/OpenSeadragonAnnotator';
+export { OpenSeadragonAnnotator } from './core/OpenSeadragonAnnotator';

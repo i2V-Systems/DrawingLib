@@ -175,7 +175,7 @@ export class StyleManager extends EventEmitter {
     const { shapes, labels } = this.currentTheme;
     
     return `
-      .annotorious-shape {
+      .annotation-shape {
         fill: ${shapes.fill};
         fill-opacity: ${shapes.fillOpacity};
         stroke: ${shapes.stroke};
@@ -184,7 +184,19 @@ export class StyleManager extends EventEmitter {
         vector-effect: non-scaling-stroke;
       }
 
-      .annotorious-shape-handle {
+      .annotation-shape.selected {
+        fill: ${shapes.selectedFill};
+        stroke: ${shapes.selectedStroke};
+        stroke-width: ${shapes.selectedStrokeWidth};
+      }
+
+      .annotation-shape.hover {
+        fill: ${shapes.hoverFill};
+        stroke: ${shapes.hoverStroke};
+        stroke-width: ${shapes.hoverStrokeWidth};
+      }
+
+      .annotation-handle {
         fill: ${shapes.handleFill};
         stroke: ${shapes.handleStroke};
         stroke-width: ${shapes.handleStrokeWidth};
@@ -192,19 +204,7 @@ export class StyleManager extends EventEmitter {
         vector-effect: non-scaling-stroke;
       }
 
-      .annotorious-shape-selected {
-        fill: ${shapes.selectedFill};
-        stroke: ${shapes.selectedStroke};
-        stroke-width: ${shapes.selectedStrokeWidth};
-      }
-
-      .annotorious-shape-hover {
-        fill: ${shapes.hoverFill};
-        stroke: ${shapes.hoverStroke};
-        stroke-width: ${shapes.hoverStrokeWidth};
-      }
-
-      .annotorious-label {
+      .annotation-label {
         font-family: ${labels.fontFamily};
         font-size: ${labels.fontSize}px;
         font-weight: ${labels.fontWeight};
@@ -214,7 +214,7 @@ export class StyleManager extends EventEmitter {
         stroke-width: 2px;
       }
 
-      .annotorious-label-bg {
+      .annotation-label-bg {
         fill: ${labels.backgroundColor};
         fill-opacity: ${labels.backgroundOpacity};
         rx: ${labels.borderRadius}px;

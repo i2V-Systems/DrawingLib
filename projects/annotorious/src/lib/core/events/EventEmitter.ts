@@ -44,6 +44,10 @@ export class EventEmitter<Events extends Record<string, any> = Record<string, an
           handler(args);
         } catch (error) {
           console.error(`Error in event handler for ${String(event)}:`, error);
+          // Re-throw critical errors
+          if (error instanceof Error && error.message.includes('critical')) {
+            throw error;
+          }
         }
       });
     }

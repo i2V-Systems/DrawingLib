@@ -1,16 +1,18 @@
+export const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+
 export class SVGUtils {
   /**
    * Create an SVG element with the given tag name
    */
   static createElement(tagName: string): SVGElement {
-    return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+    return document.createElementNS(SVG_NAMESPACE, tagName);
   }
 
   /**
    * Create an SVG point
    */
   static createPoint(x: number, y: number): DOMPoint {
-    const point = (document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement).createSVGPoint();
+    const point = (document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement).createSVGPoint();
     point.x = x;
     point.y = y;
     return point;
@@ -46,7 +48,7 @@ export class SVGUtils {
    * Transform a point by a matrix
    */
   static transformPoint(point: { x: number; y: number }, matrix: DOMMatrix): { x: number; y: number } {
-    const svgPoint = (document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement).createSVGPoint();
+    const svgPoint = (document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement).createSVGPoint();
     svgPoint.x = point.x;
     svgPoint.y = point.y;
     const transformed = svgPoint.matrixTransform(matrix);
@@ -176,5 +178,174 @@ export class SVGUtils {
 
     marker.appendChild(path);
     return marker;
+  }
+
+  // Additional utility functions from SVG.ts
+  /**
+   * Get class names from an element
+   */
+  static getClassNames(el: Element): Set<string> {
+    const attr = el.getAttribute('class');
+    return attr ? new Set(attr.split(' ')) : new Set();
+  }
+
+  /**
+   * Add a CSS class to an element
+   */
+  static addClass(el: Element, className: string): void {
+    const classNames = this.getClassNames(el);
+    classNames.add(className);
+    el.setAttribute('class', Array.from(classNames).join(' '));
+  }
+
+  /**
+   * Remove a CSS class from an element
+   */
+  static removeClass(el: Element, className: string): void {
+    const classNames = this.getClassNames(el);
+    classNames.delete(className);
+
+    if (classNames.size === 0) {
+      el.removeAttribute('class');
+    } else {
+      el.setAttribute('class', Array.from(classNames).join(' '));
+    }
+  }
+
+  /**
+   * Check if an element has a specific CSS class
+   */
+  static hasClass(el: Element, className: string): boolean {
+    return this.getClassNames(el).has(className);
+  }
+
+  /**
+   * Toggle a CSS class on an element
+   */
+  static toggleClass(el: Element, className: string): void {
+    if (this.hasClass(el, className)) {
+      this.removeClass(el, className);
+    } else {
+      this.addClass(el, className);
+    }
+  }
+
+  /**
+   * Get the bounding box of an SVG element
+   */
+  static getBBox(element: SVGGraphicsElement): DOMRect {
+    return element.getBBox();
+  }
+
+  /**
+   * Get the screen bounding box of an SVG element
+   */
+  static getScreenBBox(element: SVGGraphicsElement): DOMRect {
+    return element.getBoundingClientRect();
+  }
+
+  /**
+   * Transform a point from screen coordinates to SVG coordinates
+   */
+  static screenToSVG(point: { x: number; y: number }, svg: SVGSVGElement): { x: number; y: number } {
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return point;
+
+    const svgPoint = svg.createSVGPoint();
+    svgPoint.x = point.x;
+    svgPoint.y = point.y;
+    const transformed = svgPoint.matrixTransform(CTM.inverse());
+    
+    return { x: transformed.x, y: transformed.y };
+  }
+
+  /**
+   * Transform a point from SVG coordinates to screen coordinates
+   */
+  static svgToScreen(point: { x: number; y: number }, svg: SVGSVGElement): { x: number; y: number } {
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return point;
+
+    const svgPoint = svg.createSVGPoint();
+    svgPoint.x = point.x;
+    svgPoint.y = point.y;
+    const transformed = svgPoint.matrixTransform(CTM);
+    
+    return { x: transformed.x, y: transformed.y };
+  }
+
+  /**
+   * Set the transform attribute of an SVG element
+   */
+  static setTransform(element: SVGElement, transform: string): void {
+    element.setAttribute('transform', transform);
+  }
+
+  /**
+   * Get the transform attribute of an SVG element
+   */
+  static getTransform(element: SVGElement): string {
+    return element.getAttribute('transform') || '';
+  }
+
+  /**
+   * Apply a translation transform to an SVG element
+   */
+  static translate(element: SVGElement, x: number, y: number): void {
+    const currentTransform = this.getTransform(element);
+    const newTransform = currentTransform ? `${currentTransform} translate(${x} ${y})` : `translate(${x} ${y})`;
+    this.setTransform(element, newTransform);
+  }
+
+  /**
+   * Apply a scale transform to an SVG element
+   */
+  static scale(element: SVGElement, sx: number, sy?: number): void {
+    const currentTransform = this.getTransform(element);
+    const scaleY = sy !== undefined ? sy : sx;
+    const newTransform = currentTransform ? `${currentTransform} scale(${sx} ${scaleY})` : `scale(${sx} ${scaleY})`;
+    this.setTransform(element, newTransform);
+  }
+
+  /**
+   * Apply a rotation transform to an SVG element
+   */
+  static rotate(element: SVGElement, angle: number, cx?: number, cy?: number): void {
+    const currentTransform = this.getTransform(element);
+    const center = cx !== undefined && cy !== undefined ? ` ${cx} ${cy}` : '';
+    const newTransform = currentTransform ? `${currentTransform} rotate(${angle}${center})` : `rotate(${angle}${center})`;
+    this.setTransform(element, newTransform);
+  }
+
+  /**
+   * Create an SVG path from an array of points
+   */
+  static createPathFromPoints(points: { x: number; y: number }[]): string {
+    if (points.length === 0) return '';
+    
+    const path = points.map((point, index) => {
+      const command = index === 0 ? 'M' : 'L';
+      return `${command} ${point.x} ${point.y}`;
+    }).join(' ');
+    
+    // Close the path if it has more than 2 points
+    if (points.length > 2) {
+      return `${path} Z`;
+    }
+    
+    return path;
+  }
+
+  /**
+   * Check if two elements overlap
+   */
+  static elementsOverlap(el1: SVGGraphicsElement, el2: SVGGraphicsElement): boolean {
+    const bbox1 = this.getBBox(el1);
+    const bbox2 = this.getBBox(el2);
+    
+    return !(bbox1.x + bbox1.width < bbox2.x ||
+             bbox2.x + bbox2.width < bbox1.x ||
+             bbox1.y + bbox1.height < bbox2.y ||
+             bbox2.y + bbox2.height < bbox1.y);
   }
 }

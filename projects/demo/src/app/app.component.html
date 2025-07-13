@@ -1,9 +1,16 @@
 <lib-annotorious-openseadragon
   [imageSource]="dziUrl"
   [theme]="theme"
-  [defaultTool]="'rectangle'"
+  [defaultTool]="'polygon'"
   [showToolbar]="true"
   (annotationCreated)="onAnnotationCreated($event)"
   (annotationUpdated)="onAnnotationUpdated($event)"
-  (annotationDeleted)="onAnnotationDeleted($event)">
+  (annotationDeleted)="onAnnotationDeleted($event)"
+  (annotationSelected)="onAnnotationSelected($event)"
+  (annotationDeselected)="onAnnotationDeselected($event)"
+  (editingStarted)="onEditingStarted($event)"
+  (editingStopped)="onEditingStopped($event)"
+  (shapeMoved)="onShapeMoved($event)"
+  (shapeResized)="onShapeResized($event)"
+  (labelSelected)="onLabelSelected($event)">
 </lib-annotorious-openseadragon>
