@@ -1,12 +1,11 @@
 import { Tool } from '../../core/tools/Tool';
-import { EventEmitter } from '../../core/events/EventEmitter';
 import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { EllipseShape } from '../EllipseShape';
 
-export class EllipseTool extends EventEmitter implements Tool {
-  name = 'ellipse';
-  capabilities = {
+export class EllipseTool extends Tool {
+  override name = 'ellipse';
+  override capabilities = {
     supportsMouse: true
   };
   
@@ -16,34 +15,38 @@ export class EllipseTool extends EventEmitter implements Tool {
   private isRotating = false;
   private onComplete: (shape: EllipseShape) => void;
   private minSize = 4;
+  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
-  constructor(svg: SVGSVGElement, onComplete: (shape: EllipseShape) => void) {
+  constructor(svg: SVGSVGElement, onComplete: (shape: EllipseShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
     super();
     this.svg = svg;
     this.onComplete = onComplete;
+    this.imageBounds = imageBounds;
   }
 
-  activate(): void {
+  override activate(): void {
     // Tool is now activated - no need to add event listeners
     // The ToolManager will handle all events and delegate to this tool
   }
 
-  deactivate(): void {
+  override deactivate(): void {
     this.cleanup();
   }
 
-  handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: MouseEvent): void {
     if (event.button === 0) { // Left click only
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       if (!this.currentShape) {
-        this.startDrawing(point);
+        this.startDrawing(clamped);
       } else if (event.shiftKey) {
         this.isRotating = true;
       }
     }
   }
 
-  handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: MouseEvent): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       if (this.isRotating) {
         // Rotation is not supported yet
         
@@ -56,11 +59,11 @@ export class EllipseTool extends EventEmitter implements Tool {
         });
       } else {
         // Calculate ellipse dimensions
-        const radiusX = Math.abs(point.x - this.startPoint.x) / 2;
-        const radiusY = Math.abs(point.y - this.startPoint.y) / 2;
+        const radiusX = Math.abs(clamped.x - this.startPoint.x) / 2;
+        const radiusY = Math.abs(clamped.y - this.startPoint.y) / 2;
         const center = {
-          x: this.startPoint.x + (point.x - this.startPoint.x) / 2,
-          y: this.startPoint.y + (point.y - this.startPoint.y) / 2
+          x: this.startPoint.x + (clamped.x - this.startPoint.x) / 2,
+          y: this.startPoint.y + (clamped.y - this.startPoint.y) / 2
         };
         
         this.currentShape.update({ 
@@ -74,13 +77,14 @@ export class EllipseTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseUp(point: Point, _event: MouseEvent): void {
+  override handleMouseUp(point: Point, _event: MouseEvent): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       if (this.isRotating) {
         this.isRotating = false;
       } else {
-        const radiusX = Math.abs(point.x - this.startPoint.x) / 2;
-        const radiusY = Math.abs(point.y - this.startPoint.y) / 2;
+        const radiusX = Math.abs(clamped.x - this.startPoint.x) / 2;
+        const radiusY = Math.abs(clamped.y - this.startPoint.y) / 2;
         
         // Only complete if the ellipse has some size
         if (radiusX > this.minSize && radiusY > this.minSize) {
@@ -95,8 +99,6 @@ export class EllipseTool extends EventEmitter implements Tool {
     }
   }
 
-
-
   private startDrawing(point: Point): void {
     this.startPoint = point;
     
@@ -110,7 +112,6 @@ export class EllipseTool extends EventEmitter implements Tool {
     this.svg.appendChild(this.currentShape.getElement());
   }
 
-
   private cleanup(): void {
     if (this.currentShape) {
       this.currentShape.destroy();
@@ -119,8 +120,5 @@ export class EllipseTool extends EventEmitter implements Tool {
     this.startPoint = null;
     this.isRotating = false;
   }
-
-
-
 
 }

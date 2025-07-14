@@ -13,6 +13,7 @@ import { EditManager } from './editing/EditManager';
 import { Crosshair, CrosshairConfig } from './Crosshair';
 import { isTouchDevice, enableTouchTranslation } from '../utils/Touch';
 import { createTools } from '../shapes/tools';
+import { SvgOverlayInfo, SvgOverlayPlugin } from '../plugins/SvgOverlayPlugin';
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -26,6 +27,7 @@ export interface OpenSeadragonAnnotatorConfig {
 export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly config: OpenSeadragonAnnotatorConfig;
   private readonly viewer: OpenSeadragon.Viewer;
+  private readonly svgOverlay: SvgOverlayInfo;
   private readonly svg: SVGSVGElement;
   private readonly state: AnnotationState;
   private readonly styleManager: StyleManager;
@@ -35,8 +37,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   private readonly editManager: EditManager;
   private readonly crosshair?: Crosshair;
-  private readonly _osdUpdateViewportHandler: () => void;
-  private readonly _osdResizeHandler: () => void;
 
   constructor(config: OpenSeadragonAnnotatorConfig) {
     super();
@@ -50,29 +50,40 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     this.viewer = config.viewer;
 
-    // Create SVG layer
-    this.svg = SVGUtils.createElement('svg') as SVGSVGElement;
-    this.svg.setAttribute('pointer-events', 'all');
-    this.svg.style.position = 'absolute';
-    this.svg.style.top = '0';
-    this.svg.style.left = '0';
-    this.svg.style.width = '100%';
-    this.svg.style.height = '100%';
-
+    // Try to use the SVG overlay plugin, fallback to manual creation if not available
+    let svgOverlay: SvgOverlayInfo;
+    
+    try {
+      // Ensure the SVG overlay plugin is installed
+      SvgOverlayPlugin.install();
+      
+      // Check if the plugin was installed successfully
+      if (typeof this.viewer.svgOverlay === 'function') {
+        // Use the plugin
+        svgOverlay = this.viewer.svgOverlay({
+          className: 'annotation-svg',
+          enableClickHandling: true
+        });
+      } else {
+        // Fallback: create SVG overlay manually
+        console.warn('SVG Overlay plugin not available, creating manual overlay');
+        svgOverlay = this.createManualSvgOverlay();
+      }
+    } catch (error) {
+      console.warn('SVG Overlay plugin failed, creating manual overlay:', error);
+      svgOverlay = this.createManualSvgOverlay();
+    }
+    
+    this.svgOverlay = svgOverlay;
+    
+    this.svg = this.svgOverlay.svg();
+    
     // Add touch support
     const isTouch = isTouchDevice();
     if (isTouch) {
       this.svg.setAttribute('class', 'annotation-svg touch-device');
       enableTouchTranslation(this.svg as unknown as HTMLElement);
-    } else {
-      this.svg.setAttribute('class', 'annotation-svg');
     }
-
-    // Add overlay to viewer - this is the key advantage
-    this.viewer.addOverlay({
-      element: this.svg as unknown as HTMLElement,
-      location: new OpenSeadragon.Rect(0, 0, 1, 1),
-    });
 
     // Initialize style manager
     this.styleManager = new StyleManager(config.theme);
@@ -122,6 +133,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.selectionManager.on('select', (evt) => this.state.select(evt.id));
     this.selectionManager.on('deselect', () => this.state.deselect());
 
+    // Get image natural width and height
+    const item = this.viewer.world.getItemAt(0);
+    const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
+    const imageBounds = { naturalWidth, naturalHeight };
+
     // Register tools
     const tools = createTools(this.svg, (shape) => {
       if (shape) {
@@ -147,20 +163,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         // Deactivate the current drawing tool - smart selection will handle annotation interaction
         this.toolManager.deactivateActiveTool();
       }
-    });
+    }, imageBounds);
     tools.forEach(tool => this.toolManager.registerTool(tool));
 
-    // Setup OpenSeadragon event handlers
-    this._osdUpdateViewportHandler = () => this.redrawAll();
-    this._osdResizeHandler = () => this.redrawAll();
-    this.viewer.addHandler('animation', this._osdUpdateViewportHandler);
-    this.viewer.addHandler('update-viewport', this._osdUpdateViewportHandler);
-    this.viewer.addHandler('resize', this._osdResizeHandler);
-    
-    // Set up SVG viewBox when image loads
-    this.viewer.addHandler('open', () => {
-      this.updateSVGViewBox();
-    });
 
     // Setup click handling and keyboard shortcuts
     this.setupClickHandling();
@@ -183,99 +188,129 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   /**
-   * Convert SVG coordinates to image coordinates (as percentages)
-   * This is crucial for storing annotations in image space
+   * Convert SVG coordinates to image coordinates
+   * With the SVG overlay plugin, shapes are drawn in SVG coordinates (transformed by <g>),
+   * so we must first map to viewport coordinates using the inverse CTM, then to image coordinates.
    */
   private convertToImageCoordinates(geometry: any): any {
     const viewport = this.viewer.viewport;
-    const imageSize = this.viewer.world.getItemAt(0).getContentSize();
-    
+    const g = this.svgOverlay.node();
+    const svg = this.svgOverlay.svg();
+    const ctm = g.getCTM();
+    const inverseCTM = ctm?.inverse();
+
+    // Helper to convert SVG point to viewport point
+    const svgToViewport = (point: any) => {
+      const svgPoint = svg.createSVGPoint();
+      svgPoint.x = point.x;
+      svgPoint.y = point.y;
+      const vp = inverseCTM ? svgPoint.matrixTransform(inverseCTM) : { x: point.x, y: point.y };
+      return { x: vp.x, y: vp.y };
+    };
+
+    // Helper to convert SVG point to image point
+    const svgToImage = (point: any) => {
+      const vp = svgToViewport(point);
+      const img = viewport.viewportToImageCoordinates(vp.x, vp.y);
+      return { x: img.x, y: img.y };
+    };
+
     switch (geometry.type) {
-      case 'rectangle':
+      case 'rectangle': {
+        const topLeft = svgToImage({ x: geometry.x, y: geometry.y });
+        const bottomRight = svgToImage({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
         return {
           ...geometry,
-          x: (geometry.x / viewport.getContainerSize().x) * imageSize.x,
-          y: (geometry.y / viewport.getContainerSize().y) * imageSize.y,
-          width: (geometry.width / viewport.getContainerSize().x) * imageSize.x,
-          height: (geometry.height / viewport.getContainerSize().y) * imageSize.y
+          x: topLeft.x,
+          y: topLeft.y,
+          width: bottomRight.x - topLeft.x,
+          height: bottomRight.y - topLeft.y
         };
-      
-      case 'circle':
+      }
+      case 'circle': {
+        const center = svgToImage({ x: geometry.cx, y: geometry.cy });
+        const radiusPoint = svgToImage({ x: geometry.cx + geometry.r, y: geometry.cy });
+        const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
         return {
           ...geometry,
-          cx: (geometry.cx / viewport.getContainerSize().x) * imageSize.x,
-          cy: (geometry.cy / viewport.getContainerSize().y) * imageSize.y,
-          r: Math.min(
-            (geometry.r / viewport.getContainerSize().x) * imageSize.x,
-            (geometry.r / viewport.getContainerSize().y) * imageSize.y
-          )
+          cx: center.x,
+          cy: center.y,
+          r: radius
         };
-      
+      }
       case 'polygon':
-      case 'freehand':
-        const imagePoints = geometry.points.map((point: any) => ({
-          x: (point.x / viewport.getContainerSize().x) * imageSize.x,
-          y: (point.y / viewport.getContainerSize().y) * imageSize.y
-        }));
+      case 'freehand': {
+        const imagePoints = geometry.points.map((point: any) => svgToImage(point));
         return {
           ...geometry,
           points: imagePoints
         };
-      
-      case 'point':
+      }
+      case 'point': {
+        const imagePoint = svgToImage({ x: geometry.x, y: geometry.y });
         return {
           ...geometry,
-          x: (geometry.x / viewport.getContainerSize().x) * imageSize.x,
-          y: (geometry.y / viewport.getContainerSize().y) * imageSize.y
+          x: imagePoint.x,
+          y: imagePoint.y
         };
-      
+      }
       default:
         return geometry;
     }
   }
 
   /**
-   * Convert image coordinates (as percentages) to SVG coordinates
-   * This is used when rendering annotations
+   * Convert image coordinates to viewport coordinates
+   * With the SVG overlay plugin, we need to convert from image coordinates
+   * to viewport coordinates for rendering
    */
   private convertToViewportCoordinates(geometry: any): any {
-    // When using an overlay with location: new OpenSeadragon.Rect(0, 0, 1, 1),
-    // OpenSeadragon automatically scales and positions the overlay to match the image.
-    // The SVG coordinates inside the overlay should be in the image coordinate system.
-    // No conversion needed - just return the image coordinates directly.
-    
+    const viewport = this.viewer.viewport;
+
+    const imageToViewport = (point: any) => {
+      const viewportPoint = viewport.imageToViewportCoordinates(point.x, point.y);
+      return { x: viewportPoint.x, y: viewportPoint.y };
+    };
+
     switch (geometry.type) {
-      case 'rectangle':
+      case 'rectangle': {
+        const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
+        const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
         return {
           ...geometry,
-          x: geometry.x,
-          y: geometry.y,
-          width: geometry.width,
-          height: geometry.height
+          x: topLeft.x,
+          y: topLeft.y,
+          width: bottomRight.x - topLeft.x,
+          height: bottomRight.y - topLeft.y
         };
-      
-      case 'circle':
+      }
+      case 'circle': {
+        const center = imageToViewport({ x: geometry.cx, y: geometry.cy });
+        const radiusPoint = imageToViewport({ x: geometry.cx + geometry.r, y: geometry.cy });
+        const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
         return {
           ...geometry,
-          cx: geometry.cx,
-          cy: geometry.cy,
-          r: geometry.r
+          cx: center.x,
+          cy: center.y,
+          r: radius
         };
-      
+      }
       case 'polygon':
-      case 'freehand':
+      case 'freehand': {
+        const viewportPoints = geometry.points.map((point: any) => imageToViewport(point));
         return {
           ...geometry,
-          points: geometry.points
+          points: viewportPoints
         };
-      
-      case 'point':
+      }
+      case 'point': {
+        const viewportPoint = imageToViewport({ x: geometry.x, y: geometry.y });
         return {
           ...geometry,
-          x: geometry.x,
-          y: geometry.y
+          x: viewportPoint.x,
+          y: viewportPoint.y
         };
-      
+      }
       default:
         return geometry;
     }
@@ -295,12 +330,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         return;
       }
 
-      const rect = this.svg.getBoundingClientRect();
-      const point = {
-        x: event.position.x - rect.left,
-        y: event.position.y - rect.top
-      };
-      const hitResult = this.state.findHitAnnotation(point);
+      const webPoint = new OpenSeadragon.Point(event.position.x, event.position.y);
+      const viewportPoint = this.viewer.viewport.pointFromPixel(webPoint);
+      const img = this.viewer.viewport.viewportToImageCoordinates(viewportPoint);
+      const imagePoint = { x: img.x, y: img.y };
+
+      const hitResult = this.state.findHitAnnotation(imagePoint);
 
       if (hitResult) {
         // Clicked on an annotation - select it and enable editing
@@ -324,15 +359,14 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
   }
 
-  private updateSVGViewBox(): void {
-    const imageSize = this.viewer.world.getItemAt(0).getContentSize();
-    this.svg.setAttribute('viewBox', `0 0 ${imageSize.x} ${imageSize.y}`);
-    this.svg.setAttribute('preserveAspectRatio', 'none');
-  }
+
 
   private redrawAll(): void {
-    this.updateSVGViewBox()
-    while (this.svg.firstChild) this.svg.removeChild(this.svg.firstChild);
+    // Clear the overlay node (not the entire SVG)
+    const overlayNode = this.svgOverlay.node();
+    while (overlayNode.firstChild) {
+      overlayNode.removeChild(overlayNode.firstChild);
+    }
 
     const annotations = this.state.getAll();
     for (const annotation of annotations) {
@@ -348,7 +382,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       }
 
       const svgElement = shape.getElement();
-      this.svg.appendChild(svgElement);
+      overlayNode.appendChild(svgElement);
     }
   }
 
@@ -491,19 +525,118 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.crosshair?.isEnabled() || false;
   }
 
-  destroy(): void {
-    // Remove event listeners
-    this.viewer.removeHandler('animation', this._osdUpdateViewportHandler);
-    this.viewer.removeHandler('update-viewport', this._osdUpdateViewportHandler);
-    this.viewer.removeHandler('resize', this._osdResizeHandler);
+  /**
+   * Get the SVG overlay instance for external use
+   */
+  getSvgOverlay(): SvgOverlayInfo {
+    return this.svgOverlay;
+  }
 
+  /**
+   * Create a manual SVG overlay as fallback when the plugin is not available
+   */
+  private createManualSvgOverlay(): SvgOverlayInfo {
+    // Get image natural dimensions
+    const item = this.viewer.world.getItemAt(0);
+    const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
+
+    // Create SVG element
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
+    svg.style.position = 'absolute';
+    svg.style.left = '0';
+    svg.style.top = '0';
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.pointerEvents = 'all';
+    svg.setAttribute('class', 'annotation-svg');
+    svg.setAttribute('width', naturalWidth.toString());
+    svg.setAttribute('height', naturalHeight.toString());
+    svg.setAttribute('viewBox', `0 0 ${naturalWidth} ${naturalHeight}`);
+
+    // Add to viewer canvas
+    this.viewer.canvas.appendChild(svg);
+
+    // Create main group node
+    const node = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    svg.appendChild(node);
+
+    // Create a simple overlay implementation
+    const overlay: SvgOverlayInfo = {
+      svg: () => svg,
+      node: () => node,
+      resize: () => {
+        // Simple resize implementation
+        const item = this.viewer.world.getItemAt(0);
+        const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
+        svg.setAttribute('width', naturalWidth.toString());
+        svg.setAttribute('height', naturalHeight.toString());
+        svg.setAttribute('viewBox', `0 0 ${naturalWidth} ${naturalHeight}`);
+      },
+      onClick: (element: SVGElement, handler: (event: any) => void) => {
+        new OpenSeadragon.MouseTracker({
+          element: element,
+          clickHandler: handler
+        }).setTracking(true);
+      },
+      destroy: () => {
+        if (svg.parentNode) {
+          svg.parentNode.removeChild(svg);
+        }
+      }
+    };
+
+    // Set up basic event handlers
+    const resizeHandler = () => overlay.resize();
+    this.viewer.addHandler('resize', resizeHandler);
+    this.viewer.addHandler('update-viewport', resizeHandler);
+
+    // Initial resize
+    overlay.resize();
+
+    return overlay;
+  }
+
+  /**
+   * Manually trigger a resize of the SVG overlay
+   */
+  resizeSvgOverlay(): void {
+    this.svgOverlay.resize();
+  }
+
+  destroy(): void {
     // Clean up managers
     this.toolManager.destroy();
     this.editManager.destroy();
     this.crosshair?.destroy();
 
+    // Destroy SVG overlay
+    this.svgOverlay.destroy();
+
     // Clear state
     this.state.clear();
+  }
+
+  /**
+   * Set the current annotations (replace all existing)
+   */
+  public setAnnotations(annotations: Annotation[]): void {
+    // Clear current annotations and overlay
+    this.state.clear();
+    const overlayNode = this.svgOverlay.node();
+    while (overlayNode.firstChild) {
+      overlayNode.removeChild(overlayNode.firstChild);
+    }
+
+    // Add each annotation
+    for (const annotation of annotations) {
+      // Convert geometry from image to SVG/viewport coordinates for rendering
+      const svgGeometry = this.convertToViewportCoordinates(annotation.target.selector.geometry);
+      const shape = ShapeFactory.createFromGeometry(annotation.id || crypto.randomUUID(), svgGeometry);
+      this.state.add(annotation, shape);
+    }
+
+    // Redraw all shapes
+    this.redrawAll();
   }
 
   private onAnnotationCreated(evt: { annotation: Annotation }): void {

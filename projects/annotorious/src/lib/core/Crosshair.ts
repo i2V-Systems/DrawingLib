@@ -97,7 +97,8 @@ export class Crosshair extends EventEmitter {
       return;
     }
 
-    const rect = this.svg.getBoundingClientRect();
+    // Get the container's bounding rect for accurate positioning
+    const rect = this.container.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
@@ -105,8 +106,8 @@ export class Crosshair extends EventEmitter {
   }
 
   private updatePosition(x: number, y: number): void {
-    const width = this.svg.clientWidth || this.svg.getBoundingClientRect().width;
-    const height = this.svg.clientHeight || this.svg.getBoundingClientRect().height;
+    const width = this.container.clientWidth || this.container.getBoundingClientRect().width;
+    const height = this.container.clientHeight || this.container.getBoundingClientRect().height;
 
     // Update horizontal line
     this.horizontalLine.setAttribute('x1', '0');

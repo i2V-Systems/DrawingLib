@@ -40,6 +40,67 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     });
   }
 
+  // Restore getAnnotationBBox for annotation geometry (image coordinates)
+  private getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const geom = annotation.target?.selector?.geometry;
+    if (!geom) return null;
+    switch (geom.type) {
+      case 'rectangle':
+        return {
+          minX: geom.x,
+          minY: geom.y,
+          maxX: geom.x + geom.width,
+          maxY: geom.y + geom.height
+        };
+      case 'polygon':
+      case 'freehand':
+        if (geom.points && geom.points.length) {
+          const xs = geom.points.map((p: any) => p.x);
+          const ys = geom.points.map((p: any) => p.y);
+          return {
+            minX: Math.min(...xs),
+            minY: Math.min(...ys),
+            maxX: Math.max(...xs),
+            maxY: Math.max(...ys)
+          };
+        }
+        break;
+      case 'circle':
+        return {
+          minX: geom.cx - geom.r,
+          minY: geom.cy - geom.r,
+          maxX: geom.cx + geom.r,
+          maxY: geom.cy + geom.r
+        };
+      case 'ellipse':
+        return {
+          minX: geom.cx - geom.rx,
+          minY: geom.cy - geom.ry,
+          maxX: geom.cx + geom.rx,
+          maxY: geom.cy + geom.ry
+        };
+      case 'text':
+        return {
+          minX: geom.x,
+          minY: geom.y,
+          maxX: geom.x + geom.width,
+          maxY: geom.y + geom.height
+        };
+      case 'point':
+        // Use a small box around the point for hit testing
+        const size = (geom.style?.size || 6) / 2;
+        return {
+          minX: geom.x - size,
+          minY: geom.y - size,
+          maxX: geom.x + size,
+          maxY: geom.y + size
+        };
+      default:
+        return null;
+    }
+    return null;
+  }
+
   add(annotation: Annotation, shape: Shape): void {
     const id = annotation.id || crypto.randomUUID();
     annotation.id = id;
@@ -47,7 +108,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.annotations.set(id, annotation);
     this.shapes.set(id, shape);
 
-    // Add to spatial index
+    // Add to spatial index using annotation geometry (image coordinates)
     const bbox = this.getAnnotationBBox(annotation);
     if (bbox) {
       this.spatialIndex.insert({ ...bbox, id });
@@ -93,7 +154,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   remove(id: string): void {
     const annotation = this.annotations.get(id);
     if (annotation) {
-      // Remove from spatial index
+      // Remove from spatial index using annotation geometry (image coordinates)
       const bbox = this.getAnnotationBBox(annotation);
       if (bbox) {
         this.spatialIndex.remove({ ...bbox, id });
@@ -215,67 +276,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return bestHit;
   }
 
-  /**
-   * Utility: Get bounding box for an annotation (in SVG/image coordinates)
-   */
-  private getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
-    const geom = annotation.target?.selector?.geometry;
-    if (!geom) return null;
-    switch (geom.type) {
-      case 'rectangle':
-        return {
-          minX: geom.x,
-          minY: geom.y,
-          maxX: geom.x + geom.width,
-          maxY: geom.y + geom.height
-        };
-      case 'polygon':
-      case 'freehand':
-        if (geom.points && geom.points.length) {
-          const xs = geom.points.map((p: any) => p.x);
-          const ys = geom.points.map((p: any) => p.y);
-          return {
-            minX: Math.min(...xs),
-            minY: Math.min(...ys),
-            maxX: Math.max(...xs),
-            maxY: Math.max(...ys)
-          };
-        }
-        break;
-      case 'circle':
-        return {
-          minX: geom.cx - geom.r,
-          minY: geom.cy - geom.r,
-          maxX: geom.cx + geom.r,
-          maxY: geom.cy + geom.r
-        };
-      case 'ellipse':
-        return {
-          minX: geom.cx - geom.rx,
-          minY: geom.cy - geom.ry,
-          maxX: geom.cx + geom.rx,
-          maxY: geom.cy + geom.ry
-        };
-      case 'text':
-        return {
-          minX: geom.x,
-          minY: geom.y,
-          maxX: geom.x + geom.width,
-          maxY: geom.y + geom.height
-        };
-      case 'point':
-        // Use a small box around the point for hit testing
-        const size = (geom.style?.size || 6) / 2;
-        return {
-          minX: geom.x - size,
-          minY: geom.y - size,
-          maxX: geom.x + size,
-          maxY: geom.y + size
-        };
-      default:
-        return null;
-    }
-    return null;
-  }
+
+
 }
 

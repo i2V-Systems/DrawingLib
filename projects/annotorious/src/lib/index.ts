@@ -30,5 +30,8 @@ export * from './angular/types';
 // Utility exports
 export * from './utils';
 
+// Plugin exports
+export * from './plugins';
+
 // Main Annotator class
 export { OpenSeadragonAnnotator } from './core/OpenSeadragonAnnotator';

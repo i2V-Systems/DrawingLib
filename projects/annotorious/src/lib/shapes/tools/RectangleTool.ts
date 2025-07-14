@@ -1,12 +1,11 @@
 import { Tool } from '../../core/tools/Tool';
-import { EventEmitter } from '../../core/events/EventEmitter';
 import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { RectangleShape } from '../RectangleShape';
 
-export class RectangleTool extends EventEmitter implements Tool {
-  name = 'rectangle';
-  capabilities = {
+export class RectangleTool extends Tool {
+  override name = 'rectangle';
+  override capabilities = {
     supportsMouse: true
   };
   
@@ -14,25 +13,28 @@ export class RectangleTool extends EventEmitter implements Tool {
   private currentShape: RectangleShape | null = null;
   private startPoint: Point | null = null;
   private onComplete: (shape: RectangleShape) => void;
+  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
-  constructor(svg: SVGSVGElement, onComplete: (shape: RectangleShape) => void) {
+  constructor(svg: SVGSVGElement, onComplete: (shape: RectangleShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
     super();
     this.svg = svg;
     this.onComplete = onComplete;
+    this.imageBounds = imageBounds;
   }
 
-  activate(): void {
+  override activate(): void {
     // Tool is now activated - no need to add event listeners
     // The ToolManager will handle all events and delegate to this tool
   }
 
-  deactivate(): void {
+  override deactivate(): void {
     this.cleanup();
   }
 
-  handleMouseDown(point: Point, _event: MouseEvent): void {
+  override handleMouseDown(point: Point, _event: MouseEvent): void {
     if (_event.button === 0) { // Left click only
-      this.startPoint = point;
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      this.startPoint = clamped;
       
       // Create initial shape
       this.currentShape = ShapeFactory.createDefault(
@@ -45,24 +47,26 @@ export class RectangleTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseMove(point: Point): void {
+  override handleMouseMove(point: Point): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       // Calculate rectangle dimensions
-      const x = Math.min(this.startPoint.x, point.x);
-      const y = Math.min(this.startPoint.y, point.y);
-      const width = Math.abs(point.x - this.startPoint.x);
-      const height = Math.abs(point.y - this.startPoint.y);
+      const x = Math.min(this.startPoint.x, clamped.x);
+      const y = Math.min(this.startPoint.y, clamped.y);
+      const width = Math.abs(clamped.x - this.startPoint.x);
+      const height = Math.abs(clamped.y - this.startPoint.y);
       
       // Update shape
       this.currentShape.update({ type: 'rectangle', x, y, width, height });
     }
   }
 
-  handleMouseUp(point: Point): void {
+  override handleMouseUp(point: Point): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       // Only complete if the rectangle has some size
-      if (Math.abs(point.x - this.startPoint.x) > 2 && 
-          Math.abs(point.y - this.startPoint.y) > 2) {
+      if (Math.abs(clamped.x - this.startPoint.x) > 2 && 
+          Math.abs(clamped.y - this.startPoint.y) > 2) {
         this.onComplete(this.currentShape);
       } else {
         this.cleanup();
@@ -80,6 +84,5 @@ export class RectangleTool extends EventEmitter implements Tool {
     }
     this.startPoint = null;
   }
-
 
 }

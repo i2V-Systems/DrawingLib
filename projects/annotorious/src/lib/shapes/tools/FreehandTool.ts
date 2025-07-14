@@ -1,12 +1,11 @@
 import { Tool } from '../../core/tools/Tool';
-import { EventEmitter } from '../../core/events/EventEmitter';
 import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { PolygonShape } from '../PolygonShape';
 
-export class FreehandTool extends EventEmitter implements Tool {
-  name = 'freehand';
-  capabilities = {
+export class FreehandTool extends Tool {
+  override name = 'freehand';
+  override capabilities = {
     supportsMouse: true
   };
   
@@ -16,28 +15,30 @@ export class FreehandTool extends EventEmitter implements Tool {
   private points: Point[] = [];
   private onComplete: (shape: PolygonShape) => void;
   private pathElement: SVGPathElement | null = null;
+  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
-  constructor(svg: SVGSVGElement, onComplete: (shape: PolygonShape) => void) {
+  constructor(svg: SVGSVGElement, onComplete: (shape: PolygonShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
     super();
     this.svg = svg;
     this.onComplete = onComplete;
+    this.imageBounds = imageBounds;
   }
 
-  activate(): void {
+  override activate(): void {
     this.svg.style.cursor = 'crosshair';
     // Tool is now activated - no need to add event listeners
     // The ToolManager will handle all events and delegate to this tool
   }
 
-  deactivate(): void {
+  override deactivate(): void {
     this.svg.style.cursor = '';
     this.cleanup();
   }
 
-  handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: MouseEvent): void {
     if (event.button === 0) { // Left click only
       this.isCurrentlyDrawing = true;
-      this.points = [point];
+      this.points = [(this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds)];
       
       // Create path element for visual feedback
       this.pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -51,29 +52,31 @@ export class FreehandTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: MouseEvent): void {
     if (this.isCurrentlyDrawing && this.pathElement) {
       // Add point if it's far enough from the last point
       const lastPoint = this.points[this.points.length - 1];
-      const distance = Math.sqrt((point.x - lastPoint.x) ** 2 + (point.y - lastPoint.y) ** 2);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const distance = Math.sqrt((clamped.x - lastPoint.x) ** 2 + (clamped.y - lastPoint.y) ** 2);
       
       if (distance > 2) { // Minimum distance threshold
-        this.points.push(point);
+        this.points.push(clamped);
         this.updatePath();
       }
     }
   }
 
-  handleMouseUp(point: Point, _event: MouseEvent): void {
+  override handleMouseUp(point: Point, _event: MouseEvent): void {
     if (this.isCurrentlyDrawing) {
       this.isCurrentlyDrawing = false;
       
       // Add final point if it's different from the last one
       const lastPoint = this.points[this.points.length - 1];
-      const distance = Math.sqrt((point.x - lastPoint.x) ** 2 + (point.y - lastPoint.y) ** 2);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const distance = Math.sqrt((clamped.x - lastPoint.x) ** 2 + (clamped.y - lastPoint.y) ** 2);
       
       if (distance > 2) {
-        this.points.push(point);
+        this.points.push(clamped);
       }
       
       // Only complete if we have enough points
@@ -97,9 +100,6 @@ export class FreehandTool extends EventEmitter implements Tool {
     }
   }
 
-  isDrawing(): boolean {
-    return this.isCurrentlyDrawing;
-  }
 
   private updatePath(): void {
     if (this.pathElement && this.points.length > 0) {
@@ -120,8 +120,5 @@ export class FreehandTool extends EventEmitter implements Tool {
     this.points = [];
     this.currentShape = null;
   }
-
-
-
 
 } 

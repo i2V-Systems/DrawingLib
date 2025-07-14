@@ -185,6 +185,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
    */
   private createPolygonHandles(editState: EditState, points: Point[]): void {
     const handles: EditHandle[] = [];
+    const group = editState.shape.getElement().parentNode as SVGGElement;
     
     points.forEach((point, index) => {
       const handle = this.createHandleElement(point, 'vertex');
@@ -200,7 +201,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
       // Add event listeners
       handle.addEventListener('mousedown', (e) => this.onHandleMouseDown(e, editState, editHandle));
       
-      this.svg.appendChild(handle);
+      group.appendChild(handle);
       handles.push(editHandle);
     });
 
@@ -213,6 +214,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
   private createRectangleHandles(editState: EditState, geometry: any): void {
     const { x, y, width, height } = geometry;
     const handles: EditHandle[] = [];
+    const group = editState.shape.getElement().parentNode as SVGGElement;
     
     const corners = [
       { x, y }, // top-left
@@ -234,7 +236,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
 
       handle.addEventListener('mousedown', (e) => this.onHandleMouseDown(e, editState, editHandle));
       
-      this.svg.appendChild(handle);
+      group.appendChild(handle);
       handles.push(editHandle);
     });
 
@@ -247,6 +249,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
   private createCircleHandles(editState: EditState, geometry: any): void {
     const { cx, cy, r } = geometry;
     const handles: EditHandle[] = [];
+    const group = editState.shape.getElement().parentNode as SVGGElement;
     
     // Create radius handle
     const radiusPoint = { x: cx + r, y: cy };
@@ -262,7 +265,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
 
     handle.addEventListener('mousedown', (e) => this.onHandleMouseDown(e, editState, editHandle));
     
-    this.svg.appendChild(handle);
+    group.appendChild(handle);
     handles.push(editHandle);
 
     editState.handles = handles;
@@ -274,6 +277,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
   private createEllipseHandles(editState: EditState, geometry: any): void {
     const { cx, cy, rx, ry } = geometry;
     const handles: EditHandle[] = [];
+    const group = editState.shape.getElement().parentNode as SVGGElement;
     
     // Create radius handles
     const radiusXPoint = { x: cx + rx, y: cy };
@@ -292,7 +296,7 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
 
       handle.addEventListener('mousedown', (e) => this.onHandleMouseDown(e, editState, editHandle));
       
-      this.svg.appendChild(handle);
+      group.appendChild(handle);
       handles.push(editHandle);
     });
 

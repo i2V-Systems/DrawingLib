@@ -1,9 +1,7 @@
 import { Tool } from '../../core/tools/Tool';
-import { EventEmitter } from '../../core/events/EventEmitter';
 import { Point } from '../../types/shape.types';
 import { ShapeFactory } from '../base/ShapeFactory';
 import { RectangleShape } from '../RectangleShape';
-
 
 export interface TextAnnotationGeometry {
   x: number;
@@ -27,9 +25,9 @@ export interface TextToolOptions {
   defaultBackgroundColor?: string;
 }
 
-export class TextTool extends EventEmitter implements Tool {
-  name = 'text';
-  capabilities = {
+export class TextTool extends Tool {
+  override name = 'text';
+  override capabilities = {
     supportsMouse: true
   };
   
@@ -39,15 +37,18 @@ export class TextTool extends EventEmitter implements Tool {
   private textElement: SVGTextElement | null = null;
   private onComplete: ((annotation: TextAnnotation) => void) | null = null;
   private options: Required<TextToolOptions>;
+  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(
     svg: SVGSVGElement,
     onComplete: (annotation: TextAnnotation) => void,
+    imageBounds: { naturalWidth: number, naturalHeight: number },
     options: TextToolOptions = {}
   ) {
     super();
     this.svg = svg;
     this.onComplete = onComplete;
+    this.imageBounds = imageBounds;
     this.options = {
       minWidth: 50,
       minHeight: 20,
@@ -59,18 +60,19 @@ export class TextTool extends EventEmitter implements Tool {
     };
   }
 
-  activate(): void {
+  override activate(): void {
     // Tool is now activated - no need to add event listeners
     // The ToolManager will handle all events and delegate to this tool
   }
 
-  deactivate(): void {
+  override deactivate(): void {
     this.cleanup();
   }
 
-  handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: MouseEvent): void {
     if (event.button === 0) { // Left click only
-      this.startPoint = point;
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      this.startPoint = clamped;
       
       // Create initial shape
       this.currentShape = ShapeFactory.createDefault(
@@ -93,13 +95,14 @@ export class TextTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: MouseEvent): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       // Calculate rectangle dimensions
-      const x = Math.min(this.startPoint.x, point.x);
-      const y = Math.min(this.startPoint.y, point.y);
-      const width = Math.abs(point.x - this.startPoint.x);
-      const height = Math.abs(point.y - this.startPoint.y);
+      const x = Math.min(this.startPoint.x, clamped.x);
+      const y = Math.min(this.startPoint.y, clamped.y);
+      const width = Math.abs(clamped.x - this.startPoint.x);
+      const height = Math.abs(clamped.y - this.startPoint.y);
       
       // Update shape
       this.currentShape.update({ type: 'text', x, y, width, height, text: '' });
@@ -112,13 +115,14 @@ export class TextTool extends EventEmitter implements Tool {
     }
   }
 
-  handleMouseUp(point: Point, _event: MouseEvent): void {
+  override handleMouseUp(point: Point, _event: MouseEvent): void {
     if (this.startPoint && this.currentShape) {
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       // Update final position and size
-      const x = Math.min(this.startPoint.x, point.x);
-      const y = Math.min(this.startPoint.y, point.y);
-      const width = Math.abs(point.x - this.startPoint.x);
-      const height = Math.abs(point.y - this.startPoint.y);
+      const x = Math.min(this.startPoint.x, clamped.x);
+      const y = Math.min(this.startPoint.y, clamped.y);
+      const width = Math.abs(clamped.x - this.startPoint.x);
+      const height = Math.abs(clamped.y - this.startPoint.y);
       
       this.currentShape.update({ type: 'text', x, y, width, height, text: '' });
       
