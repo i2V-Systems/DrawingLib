@@ -12,7 +12,7 @@ import { EditManager } from './editing/EditManager';
 import { Crosshair, CrosshairConfig } from './Crosshair';
 import { isTouchDevice, enableTouchTranslation } from '../utils/Touch';
 import { createTools } from '../shapes/tools';
-import { SvgOverlayInfo, SvgOverlayPlugin } from '../plugins/SvgOverlayPlugin';
+import { SvgOverlay, SvgOverlayInfo, SvgOverlayConfig } from './SvgOverlay';
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -26,7 +26,7 @@ export interface OpenSeadragonAnnotatorConfig {
 export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly config: OpenSeadragonAnnotatorConfig;
   private readonly viewer: OpenSeadragon.Viewer;
-  private readonly svgOverlay: SvgOverlayInfo;
+  private readonly svgOverlay: SvgOverlay;
   private readonly svg: SVGSVGElement;
   private readonly state: AnnotationState;
   private readonly styleManager: StyleManager;
@@ -48,31 +48,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     this.viewer = config.viewer;
 
-    // Try to use the SVG overlay plugin, fallback to manual creation if not available
-    let svgOverlay: SvgOverlayInfo;
-    
-    try {
-      // Ensure the SVG overlay plugin is installed
-      SvgOverlayPlugin.install();
-      
-      // Check if the plugin was installed successfully
-      if (typeof this.viewer.svgOverlay === 'function') {
-        // Use the plugin
-        svgOverlay = this.viewer.svgOverlay({
-          className: 'annotation-svg',
-          enableClickHandling: true
-        });
-      } else {
-        // Fallback: create SVG overlay manually
-        console.warn('SVG Overlay plugin not available, creating manual overlay');
-        svgOverlay = this.createManualSvgOverlay();
-      }
-    } catch (error) {
-      console.warn('SVG Overlay plugin failed, creating manual overlay:', error);
-      svgOverlay = this.createManualSvgOverlay();
-    }
-    
-    this.svgOverlay = svgOverlay;
+    // Use the core SvgOverlay directly
+    this.svgOverlay = new SvgOverlay(this.viewer, {
+      className: 'annotation-svg',
+      enableClickHandling: false,
+      useNaturalCoordinates: true,
+    });
     
     this.svg = this.svgOverlay.svg();
     
@@ -95,10 +76,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Initialize managers
-    this.toolManager = new ToolManager(this.svg);
     this.selectionManager = new SelectionManager();
     this.editManager = new EditManager(this.svg);
     this.state = new AnnotationState(this.styleManager);
+    this.toolManager = new ToolManager(this.svgOverlay);
 
     // Initialize crosshair if enabled
     if (this.config.crosshair) {
@@ -373,10 +354,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       let shape = (this.state as any).shapes?.get?.(id);
 
       if (!shape) {
-        shape = ShapeFactory.createFromGeometry(id, this.convertToViewportCoordinates(geometry));
+        shape = ShapeFactory.createFromGeometry(id, geometry);
         (this.state as any).shapes?.set?.(id, shape);
       } else {
-        shape.update(this.convertToViewportCoordinates(geometry));
+        shape.update(geometry);
       }
 
       const svgElement = shape.getElement();
@@ -530,69 +511,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.svgOverlay;
   }
 
-  /**
-   * Create a manual SVG overlay as fallback when the plugin is not available
-   */
-  private createManualSvgOverlay(): SvgOverlayInfo {
-    // Get image natural dimensions
-    const item = this.viewer.world.getItemAt(0);
-    const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
-
-    // Create SVG element
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
-    svg.style.position = 'absolute';
-    svg.style.left = '0';
-    svg.style.top = '0';
-    svg.style.width = '100%';
-    svg.style.height = '100%';
-    svg.style.pointerEvents = 'all';
-    svg.setAttribute('class', 'annotation-svg');
-    svg.setAttribute('width', naturalWidth.toString());
-    svg.setAttribute('height', naturalHeight.toString());
-    svg.setAttribute('viewBox', `0 0 ${naturalWidth} ${naturalHeight}`);
-
-    // Add to viewer canvas
-    this.viewer.canvas.appendChild(svg);
-
-    // Create main group node
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
-    svg.appendChild(node);
-
-    // Create a simple overlay implementation
-    const overlay: SvgOverlayInfo = {
-      svg: () => svg,
-      node: () => node,
-      resize: () => {
-        // Simple resize implementation
-        const item = this.viewer.world.getItemAt(0);
-        const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
-        svg.setAttribute('width', naturalWidth.toString());
-        svg.setAttribute('height', naturalHeight.toString());
-        svg.setAttribute('viewBox', `0 0 ${naturalWidth} ${naturalHeight}`);
-      },
-      onClick: (element: SVGElement, handler: (event: any) => void) => {
-        new OpenSeadragon.MouseTracker({
-          element: element,
-          clickHandler: handler
-        }).setTracking(true);
-      },
-      destroy: () => {
-        if (svg.parentNode) {
-          svg.parentNode.removeChild(svg);
-        }
-      }
-    };
-
-    // Set up basic event handlers
-    const resizeHandler = () => overlay.resize();
-    this.viewer.addHandler('resize', resizeHandler);
-    this.viewer.addHandler('update-viewport', resizeHandler);
-
-    // Initial resize
-    overlay.resize();
-
-    return overlay;
-  }
+  // Removed createManualSvgOverlay: now always uses core SvgOverlay
 
   /**
    * Manually trigger a resize of the SVG overlay
@@ -658,4 +577,5 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private onAnnotationDeselected(evt: { id: string }): void {
     this.emit('deselect', evt);
   }
+
 }

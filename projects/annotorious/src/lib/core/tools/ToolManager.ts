@@ -1,6 +1,7 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Point } from '../../types/shape.types';
 import { Tool, ToolName } from './Tool';
+import { SvgOverlay } from '../SvgOverlay';
 
 /**
  * Tool manager state
@@ -28,7 +29,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   private tools: Map<ToolName, Tool>;
   private state: ToolState;
   private enabled: boolean;
-  private svg: SVGSVGElement;
+  private overlay: SvgOverlay;
   private eventListeners: {
     mousedown: (event: MouseEvent) => void;
     mousemove: (event: MouseEvent) => void;
@@ -36,10 +37,10 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     dblclick: (event: MouseEvent) => void;
   };
 
-  constructor(svg: SVGSVGElement) {
+  constructor(overlay: SvgOverlay) {
     super();
     
-    this.svg = svg;
+    this.overlay = overlay;
     this.tools = new Map();
     this.state = {
       activeTool: null,
@@ -60,20 +61,20 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
    * Add event listeners when a tool becomes active
    */
   private addEventListeners(): void {
-    this.svg.addEventListener('mousedown', this.eventListeners.mousedown);
-    this.svg.addEventListener('mousemove', this.eventListeners.mousemove);
-    this.svg.addEventListener('mouseup', this.eventListeners.mouseup);
-    this.svg.addEventListener('dblclick', this.eventListeners.dblclick);
+    this.overlay.svg().addEventListener('mousedown', this.eventListeners.mousedown);
+    this.overlay.svg().addEventListener('mousemove', this.eventListeners.mousemove);
+    this.overlay.svg().addEventListener('mouseup', this.eventListeners.mouseup);
+    this.overlay.svg().addEventListener('dblclick', this.eventListeners.dblclick);
   }
 
   /**
    * Remove event listeners when no tool is active
    */
   private removeEventListeners(): void {
-    this.svg.removeEventListener('mousedown', this.eventListeners.mousedown);
-    this.svg.removeEventListener('mousemove', this.eventListeners.mousemove);
-    this.svg.removeEventListener('mouseup', this.eventListeners.mouseup);
-    this.svg.removeEventListener('dblclick', this.eventListeners.dblclick);
+    this.overlay.svg().removeEventListener('mousedown', this.eventListeners.mousedown);
+    this.overlay.svg().removeEventListener('mousemove', this.eventListeners.mousemove);
+    this.overlay.svg().removeEventListener('mouseup', this.eventListeners.mouseup);
+    this.overlay.svg().removeEventListener('dblclick', this.eventListeners.dblclick);
   }
 
   /**
@@ -301,11 +302,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
    * Get mouse position in SVG coordinates
    */
   private getMousePosition(event: MouseEvent): Point {
-    const rect = this.svg.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
+    return this.overlay.eventToImage(event);
   }
 
   /**
