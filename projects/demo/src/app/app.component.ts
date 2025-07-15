@@ -65,9 +65,10 @@ export class AppComponent {
     // Wait a tick to ensure annotoriousComp is available
     setTimeout(() => {
       if (this.annotoriousComp) {
-        for (const ann of demoAnnotations) {
-          this.annotoriousComp.addAnnotation(ann);
-        }
+        this.annotoriousComp.setAnnotations(demoAnnotations);
+        // for (const ann of demoAnnotations) {
+        //   this.annotoriousComp.addAnnotation(ann);
+        // }
       }
     }, 300);
   }

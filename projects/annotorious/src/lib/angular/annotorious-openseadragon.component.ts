@@ -29,7 +29,6 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   @Output() editingStopped = new EventEmitter<any>();
   @Output() shapeMoved = new EventEmitter<any>();
   @Output() shapeResized = new EventEmitter<any>();
-  @Output() labelSelected = new EventEmitter<any>();
 
   tools: string[] = [];
   activeTool: string | null = null;
@@ -101,9 +100,6 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
           this.annotator.on('shapeResized', (evt: any) => {
             this.shapeResized.emit(evt);
           });
-          this.annotator.on('labelSelected', (evt: any) => {
-            this.labelSelected.emit(evt);
-          });
         });
       });
     });
@@ -137,5 +133,9 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   // Method to remove an annotation
   removeAnnotation(annotationId: string): void {
     this.annotator.removeAnnotation(annotationId);
+  }
+
+  setAnnotations(annotations: any[]): void {
+    this.annotator.setAnnotations(annotations);
   }
 }

@@ -77,28 +77,5 @@
     },
     "style": { "fill": "yellow", "fontWeight": "bold" },
     "customData": { "note": "Label for group" }
-  },
-  {
-    "id": "demo-point",
-    "type": "shape",
-    "body": [
-      {
-        "type": "TextualBody",
-        "purpose": "tagging",
-        "value": "Standalone Point"
-      }
-    ],
-    "target": {
-      "selector": {
-        "type": "SvgSelector",
-        "geometry": {
-          "type": "point",
-          "x": 1200,
-          "y": 800
-        }
-      }
-    },
-    "style": { "stroke": "green", "strokeWidth": 2 },
-    "customData": { "note": "Not grouped" }
   }
 ] 

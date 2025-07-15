@@ -9,7 +9,6 @@ interface EditManagerEvents {
   shapeMoved: { id: string; deltaX: number; deltaY: number };
   shapeResized: { id: string; geometry: any };
   handleDragged: { id: string; handleIndex: number; position: Point };
-  labelSelected: { id: string; annotationId: string };
 }
 
 export interface EditHandle {
@@ -138,21 +137,6 @@ export class EditManager extends EventEmitter<EditManagerEvents> {
     return this.currentEditId ? this.editStates.get(this.currentEditId) || null : null;
   }
 
-  /**
-   * Handle label click - select associated annotation
-   */
-  handleLabelClick(annotationId: string): void {
-    const editState = this.editStates.get(annotationId);
-    if (editState) {
-      // If already editing, just ensure it's the current one
-      if (this.currentEditId !== annotationId) {
-        this.stopEditing(this.currentEditId!);
-        this.currentEditId = annotationId;
-      }
-    }
-    
-    this.emit('labelSelected', { id: annotationId, annotationId });
-  }
 
   /**
    * Create edit handles for a shape

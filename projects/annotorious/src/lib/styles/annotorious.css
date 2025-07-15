@@ -105,13 +105,6 @@
   pointer-events: none;
 }
 
-.annotation-label-group {
-  pointer-events: none;
-}
-
-.annotation-label-text {
-  pointer-events: none;
-}
 
 .editing {
   cursor: move;

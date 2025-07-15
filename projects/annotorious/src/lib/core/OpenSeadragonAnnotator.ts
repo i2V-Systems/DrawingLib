@@ -298,6 +298,17 @@ export class OpenSeadragonAnnotator extends EventEmitter {
           y: viewportPoint.y
         };
       }
+      case 'text': {
+        const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
+        const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
+        return {
+          ...geometry,
+          x: topLeft.x,
+          y: topLeft.y,
+          width: bottomRight.x - topLeft.x,
+          height: bottomRight.y - topLeft.y
+        };
+      }
       default:
         return geometry;
     }

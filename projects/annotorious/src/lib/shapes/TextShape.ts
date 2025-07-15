@@ -26,7 +26,7 @@ export class TextShape extends BaseShape {
     const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    
+
     group.appendChild(background);
     group.appendChild(text);
 
@@ -39,7 +39,7 @@ export class TextShape extends BaseShape {
     this.text.setAttribute('dominant-baseline', 'hanging');
     this.background.setAttribute('fill', 'white');
     this.background.setAttribute('fill-opacity', '0.8');
-    
+
     this.update(geometry);
   }
 

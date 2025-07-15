@@ -2,7 +2,6 @@
 export type { Annotation, AnnotationBody, AnnotationTarget, AnnotationSelector, BodyPurpose, TextBody, TagBody, ClassificationBody, LinkBody } from './types/annotation.types';
 export * from './core/events';
 export * from './core/state';
-export * from './core/labels/LabelManager';
 export * from './core/selection/SelectionManager';
 
 export * from './core/tools';

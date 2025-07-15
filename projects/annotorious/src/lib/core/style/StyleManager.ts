@@ -28,26 +28,9 @@ export interface ShapeStyle {
   hoverStrokeWidth: number;
 }
 
-export interface LabelStyle {
-  // Text
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: string;
-  textColor: string;
-
-  // Background
-  backgroundColor: string;
-  backgroundOpacity: number;
-  padding: number;
-  borderRadius: number;
-
-  // Position
-  offset: number;
-}
 
 export interface Theme {
   shapes: ShapeStyle;
-  labels: LabelStyle;
 }
 
 /**
@@ -70,17 +53,6 @@ export const lightTheme: Theme = {
     hoverFill: '#ffffff',
     hoverStroke: '#4a90e2',
     hoverStrokeWidth: 2
-  },
-  labels: {
-    fontFamily: 'Arial, sans-serif',
-    fontSize: 12,
-    fontWeight: 'normal',
-    textColor: '#000000',
-    backgroundColor: '#ffffff',
-    backgroundOpacity: 0.8,
-    padding: 4,
-    borderRadius: 3,
-    offset: 8
   }
 };
 
@@ -99,11 +71,6 @@ export const darkTheme: Theme = {
     selectedStroke: '#4a90e2',
     hoverFill: '#000000',
     hoverStroke: '#4a90e2'
-  },
-  labels: {
-    ...lightTheme.labels,
-    textColor: '#ffffff',
-    backgroundColor: '#000000'
   }
 };
 
@@ -161,18 +128,12 @@ export class StyleManager extends EventEmitter {
       : { ...this.currentTheme.shapes };
   }
 
-  /**
-   * Get label style
-   */
-  getLabelStyle(): LabelStyle {
-    return { ...this.currentTheme.labels };
-  }
 
   /**
    * Create CSS styles for SVG elements
    */
   createSVGStyles(): string {
-    const { shapes, labels } = this.currentTheme;
+    const { shapes } = this.currentTheme;
     
     return `
       .annotation-shape {
@@ -202,23 +163,6 @@ export class StyleManager extends EventEmitter {
         stroke-width: ${shapes.handleStrokeWidth};
         r: ${shapes.handleSize / 2}px;
         vector-effect: non-scaling-stroke;
-      }
-
-      .annotation-label {
-        font-family: ${labels.fontFamily};
-        font-size: ${labels.fontSize}px;
-        font-weight: ${labels.fontWeight};
-        fill: ${labels.textColor};
-        paint-order: stroke;
-        stroke: ${labels.backgroundColor};
-        stroke-width: 2px;
-      }
-
-      .annotation-label-bg {
-        fill: ${labels.backgroundColor};
-        fill-opacity: ${labels.backgroundOpacity};
-        rx: ${labels.borderRadius}px;
-        ry: ${labels.borderRadius}px;
       }
     `;
   }
