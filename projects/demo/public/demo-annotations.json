@@ -1,0 +1,104 @@
+[
+  {
+    "id": "demo-rect-1",
+    "type": "shape",
+    "groupId": "group-demo-1",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Rectangle 1"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "rectangle",
+          "x": 500,
+          "y": 400,
+          "width": 300,
+          "height": 200
+        }
+      }
+    },
+    "style": { "stroke": "red", "strokeWidth": 2 },
+    "customData": { "note": "Grouped shape 1" }
+  },
+  {
+    "id": "demo-rect-2",
+    "type": "shape",
+    "groupId": "group-demo-1",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Rectangle 2"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "rectangle",
+          "x": 850,
+          "y": 400,
+          "width": 200,
+          "height": 150
+        }
+      }
+    },
+    "style": { "stroke": "blue", "strokeWidth": 2 },
+    "customData": { "note": "Grouped shape 2" }
+  },
+  {
+    "id": "demo-label-1",
+    "type": "label",
+    "groupId": "group-demo-1",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Group Label"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "text",
+          "x": 650,
+          "y": 370,
+          "width": 120,
+          "height": 30,
+          "text": "Group Label"
+        }
+      }
+    },
+    "style": { "fill": "yellow", "fontWeight": "bold" },
+    "customData": { "note": "Label for group" }
+  },
+  {
+    "id": "demo-point",
+    "type": "shape",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Standalone Point"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "point",
+          "x": 1200,
+          "y": 800
+        }
+      }
+    },
+    "style": { "stroke": "green", "strokeWidth": 2 },
+    "customData": { "note": "Not grouped" }
+  }
+] 

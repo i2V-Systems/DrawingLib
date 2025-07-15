@@ -5,7 +5,6 @@ import { ShapeFactory } from '../shapes/base';
 import { Annotation, AnnotationBody } from '../types/annotation.types';
 import { SVGUtils } from '../utils/SVGUtils';
 import { StyleManager, Theme, ShapeStyle } from './style/StyleManager';
-import { LabelManager } from './labels/LabelManager';
 import { ToolManager } from './tools/ToolManager';
 import { SelectionManager } from './selection/SelectionManager';
 
@@ -31,7 +30,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly svg: SVGSVGElement;
   private readonly state: AnnotationState;
   private readonly styleManager: StyleManager;
-  private readonly labelManager: LabelManager;
   private readonly toolManager: ToolManager;
   private readonly selectionManager: SelectionManager;
 
@@ -97,11 +95,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Initialize managers
-    this.labelManager = new LabelManager(this.svg);
+    this.toolManager = new ToolManager(this.svg);
     this.selectionManager = new SelectionManager();
     this.editManager = new EditManager(this.svg);
     this.state = new AnnotationState(this.styleManager);
-    this.toolManager = new ToolManager(this.svg);
 
     // Initialize crosshair if enabled
     if (this.config.crosshair) {
@@ -113,17 +110,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     }
 
     // Bind manager events
-    this.labelManager.on('labelClicked', (evt: { id: string }) => {
-      this.selectAnnotation(evt.id);
-      this.enableEditing(evt.id);
-    });
-
-    this.editManager.on('editingStarted', (evt) => this.emit('editingStarted', evt));
-    this.editManager.on('editingStopped', (evt) => this.emit('editingStopped', evt));
-    this.editManager.on('shapeMoved', (evt) => this.emit('shapeMoved', evt));
-    this.editManager.on('shapeResized', (evt) => this.emit('shapeResized', evt));
-    this.editManager.on('labelSelected', (evt) => this.emit('labelSelected', evt));
-
     this.state.on('create', this.onAnnotationCreated.bind(this));
     this.state.on('update', this.onAnnotationUpdated.bind(this));
     this.state.on('delete', this.onAnnotationDeleted.bind(this));
@@ -142,14 +128,15 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     const tools = createTools(this.svg, (shape) => {
       if (shape) {
         // Remove the tool's shape from SVG before creating the annotation
-        // This prevents it from being removed by redrawAll()
         if (shape.getElement().parentNode) {
           shape.getElement().parentNode.removeChild(shape.getElement());
         }
-        
         const geometry = this.convertToImageCoordinates(shape.getGeometry());
-        this.addAnnotation({
+        const groupId = crypto.randomUUID();
+        const shapeAnnotation: Annotation = {
+          id: crypto.randomUUID(),
           type: 'Annotation',
+          groupId,
           body: [],
           target: {
             source: config.imageUrl || '',
@@ -158,9 +145,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
               geometry,
             }
           }
-        } as any);
-        
-        // Deactivate the current drawing tool - smart selection will handle annotation interaction
+        };
+
+        this.addAnnotation(shapeAnnotation);
         this.toolManager.deactivateActiveTool();
       }
     }, imageBounds);
@@ -630,9 +617,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     // Add each annotation
     for (const annotation of annotations) {
       // Convert geometry from image to SVG/viewport coordinates for rendering
-      const svgGeometry = this.convertToViewportCoordinates(annotation.target.selector.geometry);
-      const shape = ShapeFactory.createFromGeometry(annotation.id || crypto.randomUUID(), svgGeometry);
-      this.state.add(annotation, shape);
+        const svgGeometry = this.convertToViewportCoordinates(annotation.target.selector.geometry);
+        const shape = ShapeFactory.createFromGeometry(annotation.id || crypto.randomUUID(), svgGeometry);
+        this.state.add(annotation, shape);
     }
 
     // Redraw all shapes
@@ -640,87 +627,24 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   private onAnnotationCreated(evt: { annotation: Annotation }): void {
-    const { annotation } = evt;
-    const geometry = annotation.target.selector.geometry;
-    
-    // Create label if annotation has text body
-    const textBody = annotation.body.find(body => body.purpose === 'commenting');
-    if (textBody && textBody.value) {
-      const labelPosition = this.calculateLabelPosition(geometry);
-      this.labelManager.setLabel(annotation.id!, {
-        text: textBody.value,
-        position: 'top',
-        offset: 8
-      });
-      this.labelManager.updatePosition(annotation.id!, labelPosition);
-    }
-
     this.emit('create', evt);
-    // Note: redrawAll() is already called in addAnnotation(), so we don't need to call it here
-  }
-
-  private calculateLabelPosition(geometry: any): { x: number; y: number } {
-    switch (geometry.type) {
-      case 'rectangle':
-        return { x: geometry.x + geometry.width / 2, y: geometry.y };
-      
-      case 'circle':
-        return { x: geometry.cx, y: geometry.cy - geometry.r };
-      
-      case 'polygon':
-      case 'freehand':
-        if (geometry.points && geometry.points.length > 0) {
-          const center = geometry.points.reduce(
-            (acc: any, point: any) => ({ x: acc.x + point.x, y: acc.y + point.y }),
-            { x: 0, y: 0 }
-          );
-          return {
-            x: center.x / geometry.points.length,
-            y: center.y / geometry.points.length
-          };
-        }
-        return { x: 0, y: 0 };
-      
-      case 'point':
-        return { x: geometry.x, y: geometry.y };
-      
-      default:
-        return { x: 0, y: 0 };
-    }
   }
 
   private onAnnotationUpdated(evt: { id: string; changes: Partial<Annotation> }): void {
-    const { id, changes } = evt;
-    
-    // Update label if text body changed
-    if (changes.body) {
-      const textBody = changes.body.find(body => body.purpose === 'commenting');
-      if (textBody && textBody.value) {
-        this.labelManager.setLabel(id, {
-          text: textBody.value,
-          position: 'top',
-          offset: 8
-        });
-      }
-    }
-
     this.emit('update', evt);
     this.redrawAll();
   }
 
   private onAnnotationDeleted(evt: { id: string }): void {
-    this.labelManager.removeLabel(evt.id);
     this.emit('delete', evt);
     this.redrawAll();
   }
 
   private onAnnotationSelected(evt: { id: string }): void {
-    this.labelManager.setVisible(evt.id, true);
     this.emit('select', evt);
   }
 
   private onAnnotationDeselected(evt: { id: string }): void {
-    this.labelManager.setVisible(evt.id, false);
     this.emit('deselect', evt);
   }
 }

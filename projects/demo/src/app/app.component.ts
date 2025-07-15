@@ -1,20 +1,25 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/public-api';
 import { AnnotationEvent } from '../../../annotorious/src/lib/types/annotation.types';
 import { darkTheme } from '../../../annotorious/src/lib/core/style/StyleManager';
+import { AnnotoriousOpenseadragonComponent } from '../../../annotorious/src/lib/angular/annotorious-openseadragon.component';
+import demoAnnotations from '../../public/demo-annotations.json';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, AnnotoriousOpenseadragonModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
 export class AppComponent {
   title = 'demo';
   dziUrl = { type: 'image', url : '/demo.jpg'};
   theme = darkTheme;
+
+  @ViewChild(AnnotoriousOpenseadragonComponent)
+  annotoriousComp!: AnnotoriousOpenseadragonComponent;
 
   onAnnotationCreated(event: AnnotationEvent) {
     console.log('Annotation created:', event);
@@ -54,5 +59,16 @@ export class AppComponent {
 
   onLabelSelected(event: any) {
     console.log('Label selected:', event);
+  }
+
+  ngAfterViewInit() {
+    // Wait a tick to ensure annotoriousComp is available
+    setTimeout(() => {
+      if (this.annotoriousComp) {
+        for (const ann of demoAnnotations) {
+          this.annotoriousComp.addAnnotation(ann);
+        }
+      }
+    }, 300);
   }
 }

@@ -89,11 +89,8 @@ export class TextShape extends BaseShape {
     }
   }
 
-  override setDefaultStyles(): void {
-    // Override default styles for text shape
-    this.text.setAttribute('fill', '#000');
-    this.text.setAttribute('font-family', 'Arial, sans-serif');
-    this.text.setAttribute('font-size', '14px');
+  protected override setDefaultStyles(): void {
+    // No-op: styles are set directly on text and background elements
   }
 
   override getGeometry(): Geometry {

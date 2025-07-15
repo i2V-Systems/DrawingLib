@@ -5,6 +5,7 @@ import { StyleManager } from '../style/StyleManager';
 import { SpatialIndex, SpatialItem } from './SpatialIndex';
 import { HitDetection } from '../../utils/HitDetection';
 import { Point } from '../../types/shape.types';
+import { GroupManager } from '../grouping/GroupManager';
 
 interface AnnotationStateEvents {
   create: { annotation: Annotation };
@@ -20,6 +21,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   private selectedId: string | null;
   private readonly styleManager: StyleManager;
   private readonly spatialIndex: SpatialIndex;
+  public readonly groupManager: GroupManager;
 
 
   constructor(styleManager: StyleManager) {
@@ -29,6 +31,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.selectedId = null;
     this.styleManager = styleManager;
     this.spatialIndex = new SpatialIndex();
+    this.groupManager = new GroupManager(this);
 
     // Listen for style changes
     this.styleManager.on('styleChanged', ({ id }) => {
@@ -43,81 +46,83 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   // Restore getAnnotationBBox for annotation geometry (image coordinates)
   private getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
     const geom = annotation.target?.selector?.geometry;
-    if (!geom) return null;
-    switch (geom.type) {
-      case 'rectangle':
-        return {
-          minX: geom.x,
-          minY: geom.y,
-          maxX: geom.x + geom.width,
-          maxY: geom.y + geom.height
-        };
-      case 'polygon':
-      case 'freehand':
-        if (geom.points && geom.points.length) {
-          const xs = geom.points.map((p: any) => p.x);
-          const ys = geom.points.map((p: any) => p.y);
+      if (!geom) return null;
+      switch (geom.type) {
+        case 'rectangle':
           return {
-            minX: Math.min(...xs),
-            minY: Math.min(...ys),
-            maxX: Math.max(...xs),
-            maxY: Math.max(...ys)
+            minX: geom.x,
+            minY: geom.y,
+            maxX: geom.x + geom.width,
+            maxY: geom.y + geom.height
           };
-        }
-        break;
-      case 'circle':
-        return {
-          minX: geom.cx - geom.r,
-          minY: geom.cy - geom.r,
-          maxX: geom.cx + geom.r,
-          maxY: geom.cy + geom.r
-        };
-      case 'ellipse':
-        return {
-          minX: geom.cx - geom.rx,
-          minY: geom.cy - geom.ry,
-          maxX: geom.cx + geom.rx,
-          maxY: geom.cy + geom.ry
-        };
-      case 'text':
-        return {
-          minX: geom.x,
-          minY: geom.y,
-          maxX: geom.x + geom.width,
-          maxY: geom.y + geom.height
-        };
-      case 'point':
-        // Use a small box around the point for hit testing
-        const size = (geom.style?.size || 6) / 2;
-        return {
-          minX: geom.x - size,
-          minY: geom.y - size,
-          maxX: geom.x + size,
-          maxY: geom.y + size
-        };
-      default:
-        return null;
+        case 'polygon':
+        case 'freehand':
+          if (geom.points && geom.points.length) {
+            const xs = geom.points.map((p: any) => p.x);
+            const ys = geom.points.map((p: any) => p.y);
+            return {
+              minX: Math.min(...xs),
+              minY: Math.min(...ys),
+              maxX: Math.max(...xs),
+              maxY: Math.max(...ys)
+            };
+          }
+          break;
+        case 'circle':
+          return {
+            minX: geom.cx - geom.r,
+            minY: geom.cy - geom.r,
+            maxX: geom.cx + geom.r,
+            maxY: geom.cy + geom.r
+          };
+        case 'ellipse':
+          return {
+            minX: geom.cx - geom.rx,
+            minY: geom.cy - geom.ry,
+            maxX: geom.cx + geom.rx,
+            maxY: geom.cy + geom.ry
+          };
+        case 'text':
+          return {
+            minX: geom.x,
+            minY: geom.y,
+            maxX: geom.x + geom.width,
+            maxY: geom.y + geom.height
+          };
+        case 'point':
+          // Use a small box around the point for hit testing
+          const size = (geom.style?.size || 6) / 2;
+          return {
+            minX: geom.x - size,
+            minY: geom.y - size,
+            maxX: geom.x + size,
+            maxY: geom.y + size
+          };
+        default:
+          return null;
     }
     return null;
   }
 
-  add(annotation: Annotation, shape: Shape): void {
+  add(annotation: Annotation, shape?: Shape): void {
     const id = annotation.id || crypto.randomUUID();
     annotation.id = id;
 
     this.annotations.set(id, annotation);
-    this.shapes.set(id, shape);
-
-    // Add to spatial index using annotation geometry (image coordinates)
-    const bbox = this.getAnnotationBBox(annotation);
-    if (bbox) {
-      this.spatialIndex.insert({ ...bbox, id });
+    if (annotation.groupId) {
+      this.groupManager.addToGroup(annotation.groupId, id);
     }
-
-    // Apply initial style
-    const style = this.styleManager.getStyle(id);
-    shape.applyStyle(style);
-
+    if (shape) {
+      this.shapes.set(id, shape);
+      // Add to spatial index using annotation geometry (image coordinates)
+      const bbox = this.getAnnotationBBox(annotation);
+      if (bbox) {
+        this.spatialIndex.insert({ ...bbox, id });
+      }
+      // Apply initial style
+      const style = this.styleManager.getStyle(id);
+      shape.applyStyle(style);
+    }
     this.emit('create', { annotation });
   }
 
@@ -154,6 +159,9 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   remove(id: string): void {
     const annotation = this.annotations.get(id);
     if (annotation) {
+      if (annotation.groupId) {
+        this.groupManager.removeFromGroup(annotation.groupId, id);
+      }
       // Remove from spatial index using annotation geometry (image coordinates)
       const bbox = this.getAnnotationBBox(annotation);
       if (bbox) {

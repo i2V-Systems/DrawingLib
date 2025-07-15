@@ -92,18 +92,14 @@ export interface AnnotationTarget {
  */
 export interface Annotation {
   id: string;
-  type: 'Annotation';
+  type: string; // 'shape', 'label', 'group', etc.
+  groupId?: string;
   body: AnnotationBody[];
   target: AnnotationTarget;
-  creator?: {
-    id: string;
-    name?: string;
-  };
+  style?: Record<string, any>;
+  customData?: Record<string, any>;
   created?: string;
   modified?: string;
-  motivation?: string;
-  rights?: string;
-  label?: string;
 }
 
 export interface AnnotationEvent {
