@@ -1,7 +1,7 @@
-import { Tool } from '../../core/tools/Tool';
-import { Point } from '../../types/shape.types';
-import { ShapeFactory } from '../base/ShapeFactory';
-import { PolygonShape } from '../PolygonShape';
+import { Tool } from './base/Tool';
+import { Point } from '../types/shape.types';
+import { ShapeFactory } from '../shapes/base/ShapeFactory';
+import { PolygonShape } from '../shapes/PolygonShape';
 
 export class PolygonTool extends Tool {
   override capabilities = {

@@ -1,7 +1,7 @@
-import { Tool } from '../../core/tools/Tool';
-import { Point } from '../../types/shape.types';
-import { ShapeFactory } from '../base/ShapeFactory';
-import { EllipseShape } from '../EllipseShape';
+import { Tool } from './base/Tool';
+import { Point } from '../types/shape.types';
+import { ShapeFactory } from '../shapes/base/ShapeFactory';
+import { EllipseShape } from '../shapes/EllipseShape';
 
 export class EllipseTool extends Tool {
   override name = 'ellipse';

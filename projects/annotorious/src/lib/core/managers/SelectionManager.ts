@@ -1,7 +1,6 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Shape } from '../../shapes/base';
 import { Point } from '../../types/shape.types';
-
 interface SelectionManagerEvents {
   select: { id: string; shape: Shape };
   deselect: { id: string };
@@ -16,6 +15,8 @@ export class SelectionManager extends EventEmitter<SelectionManagerEvents> {
   private state: SelectionState;
   private enabled: boolean;
   private shapes: Map<string, Shape>;
+  private selectedGroupIds: string[] = [];
+  private selectedGroupShapes: Shape[] = [];
 
   constructor() {
     super();
@@ -85,21 +86,45 @@ export class SelectionManager extends EventEmitter<SelectionManagerEvents> {
       // Deselect current
       if (this.state.selectedShape) {
         this.state.selectedShape.setSelected(false);
+
       }
 
       // Select new
       this.state.selectedId = id;
       this.state.selectedShape = shape;
       shape.setSelected(true);
-
       this.emit('select', { id, shape });
     }
   }
 
   /**
-   * Clear current selection
+   * Select all shapes in the same group as the given annotation.
+   * Only the clicked annotation's shape will be editable.
+   */
+  selectGroupByAnnotation(annotation: any, allAnnotations: any[]): void {
+    if (!this.enabled) return;
+    this.clearSelection();
+    const groupId = annotation.groupId;
+    const groupAnnotations = allAnnotations.filter((a: any) => a.groupId === groupId);
+    this.selectedGroupIds = groupAnnotations.map((a: any) => a.id);
+    this.selectedGroupShapes = groupAnnotations.map((a: any) => a.shape);
+    // Select all shapes in the group visually
+    this.selectedGroupShapes.forEach(shape => shape.setSelected(true));
+    this.state.selectedId = annotation.id;
+    this.state.selectedShape = annotation.shape;
+    this.emit('select', { id: annotation.id, shape: annotation.shape });
+  }
+
+  /**
+   * Clear current selection (including group selection)
    */
   clearSelection(): void {
+    // Deselect all shapes in the selected group
+    if (this.selectedGroupShapes && this.selectedGroupShapes.length > 0) {
+      this.selectedGroupShapes.forEach(shape => shape.setSelected(false));
+      this.selectedGroupShapes = [];
+      this.selectedGroupIds = [];
+    }
     if (this.state.selectedShape) {
       this.state.selectedShape.setSelected(false);
       const id = this.state.selectedId!;
@@ -192,6 +217,7 @@ export class SelectionManager extends EventEmitter<SelectionManagerEvents> {
     this.shapes.forEach(shape => shape.removeAllListeners());
     this.shapes.clear();
   }
+
 }
 
 export interface SelectionState {

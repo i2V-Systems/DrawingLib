@@ -1,2 +1,1 @@
-export * from './annotorious-openseadragon.module';
-export * from './annotorious-openseadragon.component';
+// Export Angular components, modules, or types here if needed in the future

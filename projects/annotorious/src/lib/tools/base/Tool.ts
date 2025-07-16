@@ -1,5 +1,5 @@
 import { Point } from '../../types/shape.types';
-import { EventEmitter } from '../events/EventEmitter';
+import { EventEmitter } from '../../core/events/EventEmitter';
 
 /**
  * Supported tool names

@@ -1,3 +1,3 @@
 export * from './BaseShape';
+export * from './Shape';
 export * from './ShapeFactory';
-export type { Shape } from './Shape';

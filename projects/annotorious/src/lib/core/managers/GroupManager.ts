@@ -1,5 +1,5 @@
 import { Annotation } from '../../types/annotation.types';
-import { AnnotationState } from '../state/AnnotationState';
+import { AnnotationState } from '../store/AnnotationState';
 
 export class GroupManager {
   private groupMap: Map<string, Set<string>> = new Map(); // groupId -> annotationIds

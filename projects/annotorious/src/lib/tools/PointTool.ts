@@ -1,7 +1,7 @@
-import { Tool } from '../../core/tools/Tool';
-import { Point } from '../../types/shape.types';
-import { ShapeFactory } from '../base/ShapeFactory';
-import { PointShape } from '../PointShape';
+import { Tool } from './base/Tool';
+import { Point } from '../types/shape.types';
+import { ShapeFactory } from '../shapes/base/ShapeFactory';
+import { PointShape } from '../shapes/PointShape';
 
 export class PointTool extends Tool {
   override name = 'point';

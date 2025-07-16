@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectorRef, AfterViewInit, NgZone } from '@angular/core';
 import OpenSeadragon from 'openseadragon';
-import { OpenSeadragonAnnotator } from '../core/OpenSeadragonAnnotator';
+import { OpenSeadragonAnnotator } from '../core/annotator/OpenSeadragonAnnotator';
 import { AnnotationEvent } from '../types/annotation.types';
-import { Theme, lightTheme, darkTheme } from '../core/style/StyleManager';
+import { Theme, lightTheme, darkTheme } from '../core/managers/StyleManager';
 
 @Component({
   selector: 'lib-annotorious-openseadragon',

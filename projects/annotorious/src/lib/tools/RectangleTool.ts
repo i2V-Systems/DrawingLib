@@ -1,7 +1,7 @@
-import { Tool } from '../../core/tools/Tool';
-import { Point } from '../../types/shape.types';
-import { ShapeFactory } from '../base/ShapeFactory';
-import { RectangleShape } from '../RectangleShape';
+import { Tool } from './base/Tool';
+import { Point } from '../types/shape.types';
+import { ShapeFactory } from '../shapes/base/ShapeFactory';
+import { RectangleShape } from '../shapes/RectangleShape';
 
 export class RectangleTool extends Tool {
   override name = 'rectangle';

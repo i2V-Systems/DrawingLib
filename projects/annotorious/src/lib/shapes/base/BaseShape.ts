@@ -1,5 +1,5 @@
 import { EventEmitter } from '../../core/events/EventEmitter';
-import { ShapeStyle } from '../../core/style/StyleManager';
+import { ShapeStyle } from '../../core/managers/StyleManager';
 import { Geometry, Point } from '../../types/shape.types';
 import { SVGUtils } from '../../utils/SVGUtils';
 import { Shape } from './Shape';

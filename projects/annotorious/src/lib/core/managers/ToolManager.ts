@@ -1,7 +1,7 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Point } from '../../types/shape.types';
-import { Tool, ToolName } from './Tool';
-import { SvgOverlay } from '../SvgOverlay';
+import { Tool, ToolName } from '../../tools/base/Tool';
+import { SvgOverlay } from '../annotator/SvgOverlay';
 
 /**
  * Tool manager state
@@ -84,6 +84,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
+      console.log(event)
       const point = this.getMousePosition(event);
       this.handleMouseDown(point, event);
     }

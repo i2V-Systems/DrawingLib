@@ -1,18 +1,17 @@
 import OpenSeadragon from 'openseadragon';
-import { EventEmitter } from './events/EventEmitter';
-import { AnnotationState } from './state/AnnotationState';
-import { ShapeFactory } from '../shapes/base';
-import { Annotation, AnnotationBody } from '../types/annotation.types';
-import { SVGUtils } from '../utils/SVGUtils';
-import { StyleManager, Theme, ShapeStyle } from './style/StyleManager';
-import { ToolManager } from './tools/ToolManager';
-import { SelectionManager } from './selection/SelectionManager';
-
-import { EditManager } from './editing/EditManager';
+import { EventEmitter } from '../events/EventEmitter';
+import { StyleManager } from '../managers/StyleManager';
+import { ToolManager } from '../managers/ToolManager';
+import { SelectionManager } from '../managers/SelectionManager';
+import { AnnotationState } from '../store/AnnotationState';
+import { ShapeFactory } from '../../shapes/base';
+import { Annotation, AnnotationBody } from '../../types/annotation.types';
+import { isTouchDevice, enableTouchTranslation } from '../../utils/Touch';
+import { Theme, ShapeStyle } from '../managers/StyleManager';
 import { Crosshair, CrosshairConfig } from './Crosshair';
-import { isTouchDevice, enableTouchTranslation } from '../utils/Touch';
-import { createTools } from '../shapes/tools';
-import { SvgOverlay, SvgOverlayInfo, SvgOverlayConfig } from './SvgOverlay';
+import { createTools } from '../../tools';
+import { SvgOverlay, SvgOverlayInfo } from './SvgOverlay';
+import { EditManager } from '../managers/EditManager';
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -32,7 +31,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly styleManager: StyleManager;
   private readonly toolManager: ToolManager;
   private readonly selectionManager: SelectionManager;
-
   private readonly editManager: EditManager;
   private readonly crosshair?: Crosshair;
 
@@ -97,8 +95,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state.on('select', this.onAnnotationSelected.bind(this));
     this.state.on('deselect', this.onAnnotationDeselected.bind(this));
 
-    this.selectionManager.on('select', (evt) => this.state.select(evt.id));
-    this.selectionManager.on('deselect', () => this.state.deselect());
 
     // Get image natural width and height
     const item = this.viewer.world.getItemAt(0);
@@ -112,7 +108,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         if (shape.getElement().parentNode) {
           shape.getElement().parentNode.removeChild(shape.getElement());
         }
-        const geometry = this.convertToImageCoordinates(shape.getGeometry());
+        const geometry = shape.getGeometry();
         const groupId = crypto.randomUUID();
         const shapeAnnotation: Annotation = {
           id: crypto.randomUUID(),
@@ -151,81 +147,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       this.crosshair?.setDrawingMode(false);
     });
 
+    this.selectionManager.on('select', (evt) => this.state.select(evt.id));
+    this.selectionManager.on('deselect', () => this.state.deselect());
     // Initial redraw
     this.redrawAll();
   }
 
-  /**
-   * Convert SVG coordinates to image coordinates
-   * With the SVG overlay plugin, shapes are drawn in SVG coordinates (transformed by <g>),
-   * so we must first map to viewport coordinates using the inverse CTM, then to image coordinates.
-   */
-  private convertToImageCoordinates(geometry: any): any {
-    const viewport = this.viewer.viewport;
-    const g = this.svgOverlay.node();
-    const svg = this.svgOverlay.svg();
-    const ctm = g.getCTM();
-    const inverseCTM = ctm?.inverse();
-
-    // Helper to convert SVG point to viewport point
-    const svgToViewport = (point: any) => {
-      const svgPoint = svg.createSVGPoint();
-      svgPoint.x = point.x;
-      svgPoint.y = point.y;
-      const vp = inverseCTM ? svgPoint.matrixTransform(inverseCTM) : { x: point.x, y: point.y };
-      return { x: vp.x, y: vp.y };
-    };
-
-    // Helper to convert SVG point to image point
-    const svgToImage = (point: any) => {
-      const vp = svgToViewport(point);
-      const img = viewport.viewportToImageCoordinates(vp.x, vp.y);
-      return { x: img.x, y: img.y };
-    };
-
-    switch (geometry.type) {
-      case 'rectangle': {
-        const topLeft = svgToImage({ x: geometry.x, y: geometry.y });
-        const bottomRight = svgToImage({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
-        return {
-          ...geometry,
-          x: topLeft.x,
-          y: topLeft.y,
-          width: bottomRight.x - topLeft.x,
-          height: bottomRight.y - topLeft.y
-        };
-      }
-      case 'circle': {
-        const center = svgToImage({ x: geometry.cx, y: geometry.cy });
-        const radiusPoint = svgToImage({ x: geometry.cx + geometry.r, y: geometry.cy });
-        const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
-        return {
-          ...geometry,
-          cx: center.x,
-          cy: center.y,
-          r: radius
-        };
-      }
-      case 'polygon':
-      case 'freehand': {
-        const imagePoints = geometry.points.map((point: any) => svgToImage(point));
-        return {
-          ...geometry,
-          points: imagePoints
-        };
-      }
-      case 'point': {
-        const imagePoint = svgToImage({ x: geometry.x, y: geometry.y });
-        return {
-          ...geometry,
-          x: imagePoint.x,
-          y: imagePoint.y
-        };
-      }
-      default:
-        return geometry;
-    }
-  }
 
   /**
    * Convert image coordinates to viewport coordinates
@@ -296,16 +223,13 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
 
-
-
-
   private setupClickHandling(): void {
     // Handle click events for smart selection (when not in drawing mode)
     this.viewer.addHandler('canvas-click', (event: OpenSeadragon.CanvasClickEvent) => {
       event.preventDefaultAction = false;
 
-      // Don't handle clicks when drawing or already editing
-      if (this.toolManager.isDrawing() || this.editManager.isEditing()) {
+      // Don't handle clicks when drawing
+      if (this.toolManager.isDrawing()) {
         return;
       }
 
@@ -320,11 +244,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         // Clicked on an annotation - select it and enable editing
         this.selectAnnotation(hitResult.id);
         this.enableEditing(hitResult.id);
-        this.emit('select', { id: hitResult.id, distance: hitResult.distance });
       } else {
         // Clicked on empty space - clear selection
         this.clearSelectionAndEditing();
-        this.emit('deselect', {});
       }
     });
 
@@ -390,16 +312,16 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   selectAnnotation(id: string): void {
-    this.state.select(id);
+    this.selectionManager.select(id);
   }
 
   clearSelection(): void {
-    this.state.deselect();
+    this.selectionManager.clearSelection();
   }
 
   clearSelectionAndEditing(): void {
     this.editManager.stopAllEditing();
-    this.state.deselect();
+    this.selectionManager.clearSelection();
   }
 
   enableEditing(id: string): void {
@@ -522,13 +444,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   destroy(): void {
     // Clean up managers
+    this.selectionManager.destroy();
     this.toolManager.destroy();
-    this.editManager.destroy();
     this.crosshair?.destroy();
-
     // Destroy SVG overlay
     this.svgOverlay.destroy();
-
     // Clear state
     this.state.clear();
   }

@@ -1,6 +1,6 @@
 import { Geometry } from '../../types/shape.types';
 import { Point } from '../../types/shape.types';
-import { ShapeStyle } from '../../core/style/StyleManager';
+import { ShapeStyle } from '../../core/managers/StyleManager';
 
 interface ShapeEvents {
   select: { id: string };

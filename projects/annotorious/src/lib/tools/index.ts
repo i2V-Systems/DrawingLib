@@ -1,10 +1,19 @@
+export * from './base/Tool';
+export * from './FreehandTool';
+export * from './PointTool';
+export * from './CircleTool';
+export * from './EllipseTool';
+export * from './PolygonTool';
+export * from './RectangleTool';
+
+
 import { PolygonTool } from './PolygonTool';
 import { RectangleTool } from './RectangleTool';
 import { CircleTool } from './CircleTool';
 import { EllipseTool } from './EllipseTool';
 import { PointTool } from './PointTool';
 import { FreehandTool } from './FreehandTool';
-import { Tool } from '../../core/tools/Tool';
+import { Tool } from './base/Tool';
 
 export const createTools = (
   svg: SVGSVGElement,
@@ -23,11 +32,3 @@ export const createTools = (
 
   return tools;
 };
-
-// Export individual tools for direct access
-export { RectangleTool } from './RectangleTool';
-export { CircleTool } from './CircleTool';
-export { EllipseTool } from './EllipseTool';
-export { PolygonTool } from './PolygonTool';
-export { PointTool } from './PointTool';
-export { FreehandTool } from './FreehandTool';

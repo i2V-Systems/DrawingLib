@@ -1,11 +1,11 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Annotation } from '../../types/annotation.types';
 import { Shape } from '../../shapes/base';
-import { StyleManager } from '../style/StyleManager';
+import { StyleManager } from '../managers/StyleManager';
 import { SpatialIndex, SpatialItem } from './SpatialIndex';
 import { HitDetection } from '../../utils/HitDetection';
 import { Point } from '../../types/shape.types';
-import { GroupManager } from '../grouping/GroupManager';
+import { GroupManager } from '../managers/GroupManager';
 
 interface AnnotationStateEvents {
   create: { annotation: Annotation };

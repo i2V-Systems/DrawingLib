@@ -2,7 +2,7 @@ import { Component, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/public-api';
 import { AnnotationEvent } from '../../../annotorious/src/lib/types/annotation.types';
-import { darkTheme } from '../../../annotorious/src/lib/core/style/StyleManager';
+import { darkTheme } from '../../../annotorious/src/lib/core/managers/StyleManager';
 import { AnnotoriousOpenseadragonComponent } from '../../../annotorious/src/lib/angular/annotorious-openseadragon.component';
 import demoAnnotations from '../../public/demo-annotations.json';
 
