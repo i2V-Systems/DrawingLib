@@ -10,6 +10,7 @@ export class TextShape extends BaseShape {
   private width: number = 0;
   private height: number = 0;
 
+
   override getBBox(): { x: number; y: number; width: number; height: number } {
     const bbox = this.text.getBBox();
     return {
@@ -103,5 +104,88 @@ export class TextShape extends BaseShape {
       text: this.content,
       style: {}
     };
+  }
+
+  public override getEditHandles(): { x: number; y: number; type: string; element: SVGCircleElement }[] {
+    const positions = [
+      { x: this.x, y: this.y },
+      { x: this.x + this.width, y: this.y },
+      { x: this.x + this.width, y: this.y + this.height },
+      { x: this.x, y: this.y + this.height }
+    ];
+    return this.handles.map((handle, i) => ({
+      x: positions[i].x,
+      y: positions[i].y,
+      type: 'corner',
+      element: handle
+    }));
+  }
+
+  public updateFromHandle(handle: SVGCircleElement, newPosition: { x: number; y: number }): void {
+    const idx = this.handles.indexOf(handle);
+    if (idx === -1) return;
+    // 0: NW, 1: NE, 2: SE, 3: SW
+    let x1 = this.x, y1 = this.y, x2 = this.x + this.width, y2 = this.y + this.height;
+    switch (idx) {
+      case 0: x1 = newPosition.x; y1 = newPosition.y; break;
+      case 1: x2 = newPosition.x; y1 = newPosition.y; break;
+      case 2: x2 = newPosition.x; y2 = newPosition.y; break;
+      case 3: x1 = newPosition.x; y2 = newPosition.y; break;
+    }
+    // Normalize coordinates
+    const nx = Math.min(x1, x2), ny = Math.min(y1, y2);
+    const nw = Math.abs(x2 - x1), nh = Math.abs(y2 - y1);
+    this.update({ type: 'text', x: nx, y: ny, width: nw, height: nh, text: this.content, style: {} });
+    this.updateHandlePositions();
+  }
+
+  public override moveBy(deltaX: number, deltaY: number): void {
+    this.x += deltaX;
+    this.y += deltaY;
+    this.update({ type: 'text', x: this.x, y: this.y, width: this.width, height: this.height, text: this.content, style: {} });
+    if (this.handles && this.handles.length > 0) {
+      this.updateHandlePositions();
+    }
+  }
+
+  protected override showEditHandles(): void {
+    this.hideEditHandles();
+    // Four corners: NW, NE, SE, SW
+    const positions = [
+      { x: this.x, y: this.y },
+      { x: this.x + this.width, y: this.y },
+      { x: this.x + this.width, y: this.y + this.height },
+      { x: this.x, y: this.y + this.height }
+    ];
+    this.handles = positions.map(pos => {
+      const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handle.setAttribute('cx', pos.x.toString());
+      handle.setAttribute('cy', pos.y.toString());
+      handle.setAttribute('r', '6');
+      handle.setAttribute('class', 'a9s-handle');
+      this.group.appendChild(handle);
+      return handle;
+    });
+  }
+
+  protected override hideEditHandles(): void {
+    this.handles.forEach(handle => {
+      handle.parentNode?.removeChild(handle);
+    });
+    this.handles = [];
+  }
+
+  private updateHandlePositions(): void {
+    if (this.handles.length !== 4) return;
+    const positions = [
+      { x: this.x, y: this.y },
+      { x: this.x + this.width, y: this.y },
+      { x: this.x + this.width, y: this.y + this.height },
+      { x: this.x, y: this.y + this.height }
+    ];
+    this.handles.forEach((handle, i) => {
+      handle.setAttribute('cx', positions[i].x.toString());
+      handle.setAttribute('cy', positions[i].y.toString());
+    });
   }
 }

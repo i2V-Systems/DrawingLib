@@ -14,19 +14,31 @@ interface ShapeEvents {
 
 export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Shape {
   protected readonly id: string;
-  protected readonly element: SVGGraphicsElement;
+  protected readonly rootGroup: SVGGElement;
+  protected readonly shapeElement: SVGGraphicsElement;
   protected selected: boolean;
   protected hovered: boolean;
+  protected handles: SVGCircleElement[] = [];
+  protected handlesGroup: SVGGElement;
 
-  constructor(id: string, element: SVGGraphicsElement) {
+  constructor(id: string, shapeElement: SVGGraphicsElement) {
     super();
     this.id = id;
-    this.element = element;
+    this.shapeElement = shapeElement;
+    this.rootGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.rootGroup.setAttribute('class', 'a9s-shape-group');
     this.selected = false;
     this.hovered = false;
 
     // Set default styles
     this.setDefaultStyles();
+
+    // Create a group for handles and append to the root group
+    this.handlesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.handlesGroup.setAttribute('class', 'a9s-handles-group');
+    this.handlesGroup.style.display = 'none';
+    this.rootGroup.appendChild(this.shapeElement);
+    this.rootGroup.appendChild(this.handlesGroup);
   }
 
   /**
@@ -39,8 +51,8 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   /**
    * Get the shape's SVG element
    */
-  getElement(): SVGGraphicsElement {
-    return this.element;
+  getElement(): SVGGElement {
+    return this.rootGroup;
   }
 
   /**
@@ -59,7 +71,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   setSelected(selected: boolean): void {
     if (this.selected !== selected) {
       this.selected = selected;
-      this.element.classList.toggle('selected', selected);
+      this.shapeElement.classList.toggle('selected', selected);
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
     }
   }
@@ -70,7 +82,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   setHovered(hovered: boolean): void {
     if (this.hovered !== hovered) {
       this.hovered = hovered;
-      this.element.classList.toggle('hovered', hovered);
+      this.shapeElement.classList.toggle('hovered', hovered);
       this.emit(hovered ? 'hover' : 'unhover', { id: this.id });
     }
   }
@@ -90,8 +102,8 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Destroy the shape
    */
   destroy(): void {
-    if (this.element.parentNode) {
-      this.element.parentNode.removeChild(this.element);
+    if (this.rootGroup.parentNode) {
+      this.rootGroup.parentNode.removeChild(this.rootGroup);
     }
     this.removeAllListeners();
   }
@@ -100,73 +112,73 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Set default styles for the shape
    */
   protected setDefaultStyles(): void {
-    this.element.setAttribute('fill', 'none');
-    this.element.setAttribute('stroke', '#000');
-    this.element.setAttribute('stroke-width', '2');
-    this.element.classList.add('annotation-shape');
+    this.shapeElement.setAttribute('fill', 'none');
+    this.shapeElement.setAttribute('stroke', '#000');
+    this.shapeElement.setAttribute('stroke-width', '2');
+    this.shapeElement.classList.add('annotation-shape');
   }
 
   /**
    * Get the shape's center point
    */
   getCenter(): { x: number; y: number } {
-    return SVGUtils.getCenter(this.element);
+    return SVGUtils.getCenter(this.shapeElement);
   }
 
   /**
    * Get the shape's bounding box
    */
   getBBox(): { x: number; y: number; width: number; height: number } {
-    return this.element.getBBox();
+    return this.shapeElement.getBBox();
   }
 
   /**
    * Set the shape's visibility
    */
   setVisible(visible: boolean): void {
-    this.element.style.display = visible ? '' : 'none';
+    this.rootGroup.style.display = visible ? '' : 'none';
   }
 
   /**
    * Set the shape's opacity
    */
   setOpacity(opacity: number): void {
-    this.element.style.opacity = opacity.toString();
+    this.shapeElement.style.opacity = opacity.toString();
   }
 
   /**
    * Set the shape's stroke color
    */
   setStroke(color: string): void {
-    this.element.setAttribute('stroke', color);
+    this.shapeElement.setAttribute('stroke', color);
   }
 
   /**
    * Set the shape's stroke width
    */
   setStrokeWidth(width: number): void {
-    this.element.setAttribute('stroke-width', width.toString());
+    this.shapeElement.setAttribute('stroke-width', width.toString());
   }
 
   /**
    * Set the shape's fill color
    */
   setFill(color: string): void {
-    this.element.setAttribute('fill', color);
+    this.shapeElement.setAttribute('fill', color);
   }
 
   /**
    * Apply style to the shape
    */
   applyStyle(style: ShapeStyle): void {
-    if (this.element) {
-      this.element.style.fill = style.fill;
-      this.element.style.fillOpacity = style.fillOpacity.toString();
-      this.element.style.stroke = style.stroke;
-      this.element.style.strokeWidth = style.strokeWidth.toString();
-      this.element.style.strokeOpacity = style.strokeOpacity.toString();
+    if (this.shapeElement) {
+      this.shapeElement.style.fill = style.fill;
+      this.shapeElement.style.fillOpacity = style.fillOpacity.toString();
+      this.shapeElement.style.stroke = style.stroke;
+      this.shapeElement.style.strokeWidth = style.strokeWidth.toString();
+      this.shapeElement.style.strokeOpacity = style.strokeOpacity.toString();
       if (style.strokeDasharray) {
-        this.element.style.strokeDasharray = style.strokeDasharray;
+        this.shapeElement.style.strokeDasharray = style.strokeDasharray;
       }
     }
   }
@@ -175,7 +187,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Enable editing mode for the shape
    */
   enableEditing(): void {
-    this.element.classList.add('editing');
+    this.rootGroup.classList.add('editing');
     this.showEditHandles();
   }
 
@@ -183,7 +195,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Disable editing mode for the shape
    */
   disableEditing(): void {
-    this.element.classList.remove('editing');
+    this.rootGroup.classList.remove('editing');
     this.hideEditHandles();
   }
 
@@ -191,21 +203,21 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Show edit handles (resize, move, etc.)
    */
   protected showEditHandles(): void {
-    // Override in subclasses to show specific handles
+    this.handlesGroup.style.display = '';
   }
 
   /**
    * Hide edit handles
    */
   protected hideEditHandles(): void {
-    // Override in subclasses to hide specific handles
+    this.handlesGroup.style.display = 'none';
   }
 
   /**
    * Check if shape is in editing mode
    */
   isEditing(): boolean {
-    return this.element.classList.contains('editing');
+    return this.rootGroup.classList.contains('editing');
   }
 
   /**

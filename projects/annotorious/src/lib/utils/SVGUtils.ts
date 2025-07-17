@@ -21,7 +21,7 @@ export class SVGUtils {
   /**
    * Get mouse position relative to an SVG element
    */
-  static getMousePosition(evt: MouseEvent, svg: SVGSVGElement): { x: number; y: number } {
+  static getMousePosition(evt: PointerEvent, svg: SVGSVGElement): { x: number; y: number } {
     const CTM = svg.getScreenCTM();
     if (CTM) {
       const point = svg.createSVGPoint();

@@ -2,7 +2,7 @@ import { EventEmitter } from '../events/EventEmitter';
 import { Shape } from '../../shapes/base';
 import { Point } from '../../types/shape.types';
 interface SelectionManagerEvents {
-  select: { id: string; shape: Shape };
+  select: { id: string; shape: Shape; groupId: string };
   deselect: { id: string };
   hover: { id: string; shape: Shape };
   unhover: { id: string };
@@ -77,24 +77,69 @@ export class SelectionManager extends EventEmitter<SelectionManagerEvents> {
 
   /**
    * Select a shape by ID
+   * If the annotation is part of a group, select all group members visually.
+   * If the group is already selected, only update the selected annotation for editing.
+   * Emits groupId in the select event if present.
    */
-  select(id: string): void {
+  select(id: string, allAnnotations?: any[]): void {
     if (!this.enabled) return;
 
     const shape = this.shapes.get(id);
-    if (shape && id !== this.state.selectedId) {
-      // Deselect current
-      if (this.state.selectedShape) {
-        this.state.selectedShape.setSelected(false);
+    if (!shape) return;
 
+    // Get groupId if available
+    let groupId: string | null = null;
+    let groupAnnotations: any[] = [];
+    if (allAnnotations) {
+      const annotation = allAnnotations.find((a: any) => a.id === id);
+      if (annotation && annotation.groupId) {
+        groupId = annotation.groupId as string;
+        groupAnnotations = allAnnotations.filter((a: any) => a.groupId === groupId);
       }
-
-      // Select new
-      this.state.selectedId = id;
-      this.state.selectedShape = shape;
-      shape.setSelected(true);
-      this.emit('select', { id, shape });
     }
+
+    let groupAlreadySelected = false;
+    if (groupId && groupAnnotations.length > 1) {
+      // Check if the same group is already selected
+      if (
+        this.selectedGroupIds.length === groupAnnotations.length &&
+        this.selectedGroupIds.every(gid => groupAnnotations.some((a: any) => a.id === gid))
+      ) {
+        groupAlreadySelected = true;
+      }
+    }
+
+    if (groupId && groupAnnotations.length > 1) {
+      if (!groupAlreadySelected) {
+        // Deselect previous group
+        if (this.selectedGroupShapes && this.selectedGroupShapes.length > 0) {
+          this.selectedGroupShapes.forEach(s => s.setSelected(false));
+        }
+        this.selectedGroupIds = groupAnnotations.map((a: any) => a.id);
+        this.selectedGroupShapes = groupAnnotations
+          .map((a: any) => this.shapes.get(a.id))
+          .filter((s): s is Shape => !!s);
+        this.selectedGroupShapes.forEach(s => s.setSelected(true));
+      }
+    } else {
+      // Deselect previous group
+      if (this.selectedGroupShapes && this.selectedGroupShapes.length > 0) {
+        this.selectedGroupShapes.forEach(s => s.setSelected(false));
+        this.selectedGroupShapes = [];
+        this.selectedGroupIds = [];
+      }
+    }
+
+    // Deselect current
+    if (this.state.selectedShape && this.state.selectedId !== id) {
+      this.state.selectedShape.setSelected(false);
+    }
+
+    // Select new
+    this.state.selectedId = id;
+    this.state.selectedShape = shape;
+    shape.setSelected(true);
+    this.emit('select', { id, shape, groupId: groupId || id });
   }
 
   /**
@@ -112,7 +157,7 @@ export class SelectionManager extends EventEmitter<SelectionManagerEvents> {
     this.selectedGroupShapes.forEach(shape => shape.setSelected(true));
     this.state.selectedId = annotation.id;
     this.state.selectedShape = annotation.shape;
-    this.emit('select', { id: annotation.id, shape: annotation.shape });
+    this.emit('select', { id: annotation.id, shape: annotation.shape, groupId: groupId || annotation.id });
   }
 
   /**

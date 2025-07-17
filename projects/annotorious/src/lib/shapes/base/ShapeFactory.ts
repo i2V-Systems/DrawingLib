@@ -131,7 +131,7 @@ export class ShapeFactory {
           return new TextShape(id, geometry);
         
         case 'point':
-          return new PointShape(geometry as PointGeometry);
+          return new PointShape(id, geometry as PointGeometry);
       
         case 'freehand':
           return new FreehandShape(id, geometry as FreehandGeometry);

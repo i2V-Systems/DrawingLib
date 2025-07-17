@@ -36,7 +36,7 @@ export class PolygonTool extends Tool {
     this.cleanup();
   }
 
-  override handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       if (!this.isCurrentlyDrawing) {
@@ -47,7 +47,7 @@ export class PolygonTool extends Tool {
     }
   }
 
-  override handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.isCurrentlyDrawing && this.currentShape) {
       // Update the last point (preview line)
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
@@ -64,7 +64,7 @@ export class PolygonTool extends Tool {
     }
   }
 
-  override handleMouseUp(point: Point, event: MouseEvent): void {
+  override handleMouseUp(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       // Check for double click
       if (this.doubleClickTimeout !== null) {

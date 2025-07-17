@@ -25,7 +25,7 @@ export interface SvgOverlayInfo {
   getImageDimensions(): { width: number; height: number };
   screenToImage(screenX: number, screenY: number): { x: number; y: number };
   imageToScreen(imageX: number, imageY: number): { x: number; y: number };
-  eventToImage(event: MouseEvent): { x: number; y: number };
+  eventToImage(event: PointerEvent): { x: number; y: number };
   getImageFitInfo(): ImageFitInfo;
 }
 
@@ -138,7 +138,7 @@ export class SvgOverlay implements SvgOverlayInfo {
     return { x: screenP.x, y: screenP.y };
   }
 
-  eventToImage(event: MouseEvent): { x: number; y: number } {
+  eventToImage(event: PointerEvent): { x: number; y: number } {
     return this.screenToImage(event.clientX, event.clientY);
   }
 

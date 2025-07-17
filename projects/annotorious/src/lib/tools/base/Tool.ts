@@ -45,17 +45,17 @@ export abstract class Tool extends EventEmitter {
   /**
    * Handle mouse down event
    */
-  handleMouseDown?(point: Point, event: MouseEvent): void;
+  handleMouseDown?(point: Point, event: PointerEvent): void;
 
   /**
    * Handle mouse move event
    */
-  handleMouseMove?(point: Point, event: MouseEvent): void;
+  handleMouseMove?(point: Point, event: PointerEvent): void;
 
   /**
    * Handle mouse up event
    */
-  handleMouseUp?(point: Point, event: MouseEvent): void;
+  handleMouseUp?(point: Point, event: PointerEvent): void;
 
   /**
    * Enable or disable the tool
@@ -65,7 +65,7 @@ export abstract class Tool extends EventEmitter {
   /**
    * Handle double click event
    */
-  handleDoubleClick?(point: Point, event: MouseEvent): void;
+  handleDoubleClick?(point: Point, event: PointerEvent): void;
 
   /**
    * Clean up resources

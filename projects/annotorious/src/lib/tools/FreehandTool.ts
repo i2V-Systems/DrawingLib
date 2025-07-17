@@ -35,7 +35,7 @@ export class FreehandTool extends Tool {
     this.cleanup();
   }
 
-  override handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       this.isCurrentlyDrawing = true;
       this.points = [(this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds)];
@@ -52,7 +52,7 @@ export class FreehandTool extends Tool {
     }
   }
 
-  override handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.isCurrentlyDrawing && this.pathElement) {
       // Add point if it's far enough from the last point
       const lastPoint = this.points[this.points.length - 1];
@@ -66,7 +66,7 @@ export class FreehandTool extends Tool {
     }
   }
 
-  override handleMouseUp(point: Point, _event: MouseEvent): void {
+  override handleMouseUp(point: Point, _event: PointerEvent): void {
     if (this.isCurrentlyDrawing) {
       this.isCurrentlyDrawing = false;
       

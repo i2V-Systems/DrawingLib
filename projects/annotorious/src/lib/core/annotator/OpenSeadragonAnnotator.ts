@@ -79,6 +79,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state = new AnnotationState(this.styleManager);
     this.toolManager = new ToolManager(this.svgOverlay);
 
+    // Listen for redraw requests from EditManager (e.g., during handle drag)
+    // this.editManager.on('redrawRequested', () => this.redrawAll());
+    this.editManager.on('editingDragStarted', () => this.viewer.setMouseNavEnabled(false));
+    this.editManager.on('editingDragStopped', () => this.viewer.setMouseNavEnabled(true));
+
     // Initialize crosshair if enabled
     if (this.config.crosshair) {
       const crosshairConfig = typeof this.config.crosshair === 'boolean' 
@@ -241,8 +246,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       const hitResult = this.state.findHitAnnotation(imagePoint);
 
       if (hitResult) {
-        // Clicked on an annotation - select it and enable editing
-        this.selectAnnotation(hitResult.id);
+        const allAnnotations = this.state.getAll();
+        this.selectionManager.select(hitResult.id, allAnnotations);
+        // Editing: only the clicked annotation should be editable
+        this.editManager.stopEditing();
         this.enableEditing(hitResult.id);
       } else {
         // Clicked on empty space - clear selection
@@ -320,7 +327,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   clearSelectionAndEditing(): void {
-    this.editManager.stopAllEditing();
+    this.editManager.stopEditing();
     this.selectionManager.clearSelection();
   }
 
@@ -332,7 +339,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   disableEditing(id: string): void {
-    this.editManager.stopEditing(id);
+    this.editManager.stopEditing();
   }
 
   moveAnnotation(id: string, deltaX: number, deltaY: number): void {

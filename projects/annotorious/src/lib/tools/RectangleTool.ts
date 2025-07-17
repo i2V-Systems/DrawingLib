@@ -31,7 +31,7 @@ export class RectangleTool extends Tool {
     this.cleanup();
   }
 
-  override handleMouseDown(point: Point, _event: MouseEvent): void {
+  override handleMouseDown(point: Point, _event: PointerEvent): void {
     if (_event.button === 0) { // Left click only
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       this.startPoint = clamped;

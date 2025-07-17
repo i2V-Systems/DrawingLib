@@ -31,10 +31,10 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   private enabled: boolean;
   private overlay: SvgOverlay;
   private eventListeners: {
-    mousedown: (event: MouseEvent) => void;
-    mousemove: (event: MouseEvent) => void;
-    mouseup: (event: MouseEvent) => void;
-    dblclick: (event: MouseEvent) => void;
+    pointerdown: (event: PointerEvent) => void;
+    pointermove: (event: PointerEvent) => void;
+    pointerup: (event: PointerEvent) => void;
+    dblclick: (event: PointerEvent) => void;
   };
 
   constructor(overlay: SvgOverlay) {
@@ -50,9 +50,9 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     
     // Store event listener references for cleanup
     this.eventListeners = {
-      mousedown: this.handleSvgMouseDown.bind(this),
-      mousemove: this.handleSvgMouseMove.bind(this),
-      mouseup: this.handleSvgMouseUp.bind(this),
+      pointerdown: this.handleSvgPointerDown.bind(this),
+      pointermove: this.handleSvgPointerMove.bind(this),
+      pointerup: this.handleSvgPointerUp.bind(this),
       dblclick: this.handleSvgDoubleClick.bind(this)
     };
   }
@@ -61,26 +61,26 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
    * Add event listeners when a tool becomes active
    */
   private addEventListeners(): void {
-    this.overlay.svg().addEventListener('mousedown', this.eventListeners.mousedown);
-    this.overlay.svg().addEventListener('mousemove', this.eventListeners.mousemove);
-    this.overlay.svg().addEventListener('mouseup', this.eventListeners.mouseup);
-    this.overlay.svg().addEventListener('dblclick', this.eventListeners.dblclick);
+    this.overlay.svg().addEventListener('pointerdown', this.eventListeners.pointerdown);
+    this.overlay.svg().addEventListener('pointermove', this.eventListeners.pointermove);
+    this.overlay.svg().addEventListener('pointerup', this.eventListeners.pointerup);
+    this.overlay.svg().addEventListener('dblclick', this.eventListeners.dblclick as unknown as EventListener);
   }
 
   /**
    * Remove event listeners when no tool is active
    */
   private removeEventListeners(): void {
-    this.overlay.svg().removeEventListener('mousedown', this.eventListeners.mousedown);
-    this.overlay.svg().removeEventListener('mousemove', this.eventListeners.mousemove);
-    this.overlay.svg().removeEventListener('mouseup', this.eventListeners.mouseup);
-    this.overlay.svg().removeEventListener('dblclick', this.eventListeners.dblclick);
+    this.overlay.svg().removeEventListener('pointerdown', this.eventListeners.pointerdown);
+    this.overlay.svg().removeEventListener('pointermove', this.eventListeners.pointermove);
+    this.overlay.svg().removeEventListener('pointerup', this.eventListeners.pointerup);
+    this.overlay.svg().removeEventListener('dblclick', this.eventListeners.dblclick as unknown as EventListener);
   }
 
   /**
    * SVG event handlers
    */
-  private handleSvgMouseDown(event: MouseEvent): void {
+  private handleSvgPointerDown(event: PointerEvent): void {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
@@ -90,7 +90,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     }
   }
 
-  private handleSvgMouseMove(event: MouseEvent): void {
+  private handleSvgPointerMove(event: PointerEvent): void {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
@@ -99,7 +99,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     }
   }
 
-  private handleSvgMouseUp(event: MouseEvent): void {
+  private handleSvgPointerUp(event: PointerEvent): void {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
@@ -108,7 +108,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     }
   }
 
-  private handleSvgDoubleClick(event: MouseEvent): void {
+  private handleSvgDoubleClick(event: PointerEvent): void {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
@@ -230,7 +230,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Handle mouse down event
    */
-  handleMouseDown(point: Point, event: MouseEvent): void {
+  handleMouseDown(point: Point, event: PointerEvent): void {
     if (!this.enabled) return;
     if (this.state.activeTool?.capabilities?.supportsMouse) {
       this.state.activeTool.handleMouseDown?.(point, event);
@@ -240,7 +240,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Handle mouse move event
    */
-  handleMouseMove(point: Point, event: MouseEvent): void {
+  handleMouseMove(point: Point, event: PointerEvent): void {
     if (!this.enabled) return;
     if (this.state.activeTool?.capabilities?.supportsMouse) {
       this.state.activeTool.handleMouseMove?.(point, event);
@@ -250,7 +250,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Handle mouse up event
    */
-  handleMouseUp(point: Point, event: MouseEvent): void {
+  handleMouseUp(point: Point, event: PointerEvent): void {
     if (!this.enabled) return;
     if (this.state.activeTool?.capabilities?.supportsMouse) {
       this.state.activeTool.handleMouseUp?.(point, event);
@@ -260,7 +260,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Handle double click event
    */
-  handleDoubleClick(point: Point, event: MouseEvent): void {
+  handleDoubleClick(point: Point, event: PointerEvent): void {
     if (!this.enabled) return;
     if (this.state.activeTool && typeof this.state.activeTool.handleDoubleClick === 'function') {
       this.state.activeTool.handleDoubleClick(point, event);
@@ -302,7 +302,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Get mouse position in SVG coordinates
    */
-  private getMousePosition(event: MouseEvent): Point {
+  private getMousePosition(event: PointerEvent): Point {
     return this.overlay.eventToImage(event);
   }
 

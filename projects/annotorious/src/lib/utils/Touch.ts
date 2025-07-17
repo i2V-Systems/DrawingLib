@@ -1,7 +1,7 @@
 const SIM_EVENTS = {
-  touchstart: 'mousedown',
-  touchmove: 'mousemove',
-  touchend: 'mouseup'
+  touchstart: 'pointerdown',
+  touchmove: 'pointermove',
+  touchend: 'pointerup'
 } as const;
 
 /**
@@ -18,8 +18,8 @@ export const isTouchDevice = (): boolean =>
 export const enableTouchTranslation = (element: HTMLElement): void => {
   let pressAndHoldTrigger: number | null = null;
 
-  const simulateEvent = (type: string, touch: Touch): MouseEvent => {
-    return new MouseEvent(type, {
+  const simulateEvent = (type: string, touch: Touch): PointerEvent => {
+    return new PointerEvent(type, {
       screenX: touch.screenX,
       screenY: touch.screenY,
       clientX: touch.clientX,

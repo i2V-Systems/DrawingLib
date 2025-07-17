@@ -86,4 +86,57 @@ export class FreehandShape extends BaseShape {
     
     return inside;
   }
+
+  public override getEditHandles(): { x: number; y: number; type: string; element: SVGCircleElement }[] {
+    return this.handles.map((handle, i) => ({
+      x: this.geometry.points[i].x,
+      y: this.geometry.points[i].y,
+      type: 'vertex',
+      element: handle
+    }));
+  }
+
+  public updateFromHandle(handle: SVGCircleElement, newPosition: { x: number; y: number }): void {
+    const idx = this.handles.indexOf(handle);
+    if (idx === -1) return;
+    this.geometry.points[idx] = { x: newPosition.x, y: newPosition.y };
+    this.update({ ...this.geometry });
+    this.updateHandlePositions();
+  }
+
+  public override moveBy(deltaX: number, deltaY: number): void {
+    this.geometry.points = this.geometry.points.map(pt => ({ x: pt.x + deltaX, y: pt.y + deltaY }));
+    this.update({ ...this.geometry });
+    if (this.handles && this.handles.length > 0) {
+      this.updateHandlePositions();
+    }
+  }
+
+  protected override showEditHandles(): void {
+    this.hideEditHandles();
+    this.handles = this.geometry.points.map(pt => {
+      const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handle.setAttribute('cx', pt.x.toString());
+      handle.setAttribute('cy', pt.y.toString());
+      handle.setAttribute('r', '6');
+      handle.setAttribute('class', 'a9s-handle');
+      this.pathElement.parentNode?.appendChild(handle);
+      return handle;
+    });
+  }
+
+  protected override hideEditHandles(): void {
+    this.handles.forEach(handle => {
+      handle.parentNode?.removeChild(handle);
+    });
+    this.handles = [];
+  }
+
+  private updateHandlePositions(): void {
+    if (this.handles.length !== this.geometry.points.length) return;
+    this.handles.forEach((handle, i) => {
+      handle.setAttribute('cx', this.geometry.points[i].x.toString());
+      handle.setAttribute('cy', this.geometry.points[i].y.toString());
+    });
+  }
 } 

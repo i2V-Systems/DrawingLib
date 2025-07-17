@@ -29,7 +29,7 @@ export class PointTool extends Tool {
     // No cleanup needed for point tool
   }
 
-  override handleMouseDown(point: Point, event: MouseEvent): void {
+  override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
       // Create point shape immediately on click
@@ -49,11 +49,11 @@ export class PointTool extends Tool {
     }
   }
 
-  override handleMouseMove(point: Point, _event: MouseEvent): void {
+  override handleMouseMove(point: Point, _event: PointerEvent): void {
     // No preview needed for point tool
   }
 
-  override handleMouseUp(point: Point, _event: MouseEvent): void {
+  override handleMouseUp(point: Point, _event: PointerEvent): void {
     // Point is created on mouse down, so nothing to do here
   }
 
