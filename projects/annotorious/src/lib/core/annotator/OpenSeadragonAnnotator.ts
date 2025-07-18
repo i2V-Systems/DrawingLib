@@ -2,7 +2,6 @@ import OpenSeadragon from 'openseadragon';
 import { EventEmitter } from '../events/EventEmitter';
 import { StyleManager } from '../managers/StyleManager';
 import { ToolManager } from '../managers/ToolManager';
-import { SelectionManager } from '../managers/SelectionManager';
 import { AnnotationState } from '../store/AnnotationState';
 import { ShapeFactory } from '../../shapes/base';
 import { Annotation, AnnotationBody } from '../../types/annotation.types';
@@ -12,6 +11,8 @@ import { Crosshair, CrosshairConfig } from './Crosshair';
 import { createTools } from '../../tools';
 import { SvgOverlay, SvgOverlayInfo } from './SvgOverlay';
 import { EditManager } from '../managers/EditManager';
+import { convertToViewportCoordinates } from '../../utils/SVGUtils';
+
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -30,7 +31,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly state: AnnotationState;
   private readonly styleManager: StyleManager;
   private readonly toolManager: ToolManager;
-  private readonly selectionManager: SelectionManager;
   private readonly editManager: EditManager;
   private readonly crosshair?: Crosshair;
 
@@ -74,15 +74,27 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Initialize managers
-    this.selectionManager = new SelectionManager();
-    this.editManager = new EditManager(this.svg);
     this.state = new AnnotationState(this.styleManager);
+    this.editManager = new EditManager(this.svg);
     this.toolManager = new ToolManager(this.svgOverlay);
 
-    // Listen for redraw requests from EditManager (e.g., during handle drag)
-    // this.editManager.on('redrawRequested', () => this.redrawAll());
     this.editManager.on('editingDragStarted', () => this.viewer.setMouseNavEnabled(false));
     this.editManager.on('editingDragStopped', () => this.viewer.setMouseNavEnabled(true));
+    // Listen for geometry updates from EditManager
+    this.editManager.on('updateGeometry', ({ id, geometry }) => {
+      const annotation = this.state.getAnnotation(id);
+      if (annotation) {
+        this.updateAnnotation(id, {
+          target: {
+            ...annotation.target,
+            selector: {
+              ...annotation.target.selector,
+              geometry
+            }
+          }
+        });
+      }
+    });
 
     // Initialize crosshair if enabled
     if (this.config.crosshair) {
@@ -152,79 +164,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       this.crosshair?.setDrawingMode(false);
     });
 
-    this.selectionManager.on('select', (evt) => this.state.select(evt.id));
-    this.selectionManager.on('deselect', () => this.state.deselect());
     // Initial redraw
     this.redrawAll();
-  }
-
-
-  /**
-   * Convert image coordinates to viewport coordinates
-   * With the SVG overlay plugin, we need to convert from image coordinates
-   * to viewport coordinates for rendering
-   */
-  private convertToViewportCoordinates(geometry: any): any {
-    const viewport = this.viewer.viewport;
-
-    const imageToViewport = (point: any) => {
-      const viewportPoint = viewport.imageToViewportCoordinates(point.x, point.y);
-      return { x: viewportPoint.x, y: viewportPoint.y };
-    };
-
-    switch (geometry.type) {
-      case 'rectangle': {
-        const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
-        const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
-        return {
-          ...geometry,
-          x: topLeft.x,
-          y: topLeft.y,
-          width: bottomRight.x - topLeft.x,
-          height: bottomRight.y - topLeft.y
-        };
-      }
-      case 'circle': {
-        const center = imageToViewport({ x: geometry.cx, y: geometry.cy });
-        const radiusPoint = imageToViewport({ x: geometry.cx + geometry.r, y: geometry.cy });
-        const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
-        return {
-          ...geometry,
-          cx: center.x,
-          cy: center.y,
-          r: radius
-        };
-      }
-      case 'polygon':
-      case 'freehand': {
-        const viewportPoints = geometry.points.map((point: any) => imageToViewport(point));
-        return {
-          ...geometry,
-          points: viewportPoints
-        };
-      }
-      case 'point': {
-        const viewportPoint = imageToViewport({ x: geometry.x, y: geometry.y });
-        return {
-          ...geometry,
-          x: viewportPoint.x,
-          y: viewportPoint.y
-        };
-      }
-      case 'text': {
-        const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
-        const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
-        return {
-          ...geometry,
-          x: topLeft.x,
-          y: topLeft.y,
-          width: bottomRight.x - topLeft.x,
-          height: bottomRight.y - topLeft.y
-        };
-      }
-      default:
-        return geometry;
-    }
   }
 
 
@@ -246,8 +187,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       const hitResult = this.state.findHitAnnotation(imagePoint);
 
       if (hitResult) {
-        const allAnnotations = this.state.getAll();
-        this.selectionManager.select(hitResult.id, allAnnotations);
+        this.selectAnnotation(hitResult.id);
         // Editing: only the clicked annotation should be editable
         this.editManager.stopEditing();
         this.enableEditing(hitResult.id);
@@ -298,7 +238,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   addAnnotation(annotation: Annotation): void {
     const shape = ShapeFactory.createFromGeometry(
       annotation.id || crypto.randomUUID(),
-      this.convertToViewportCoordinates(annotation.target.selector.geometry)
+      convertToViewportCoordinates(annotation.target.selector.geometry, this.viewer.viewport)
     );
     this.state.add(annotation, shape);
     this.redrawAll();
@@ -319,16 +259,13 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   selectAnnotation(id: string): void {
-    this.selectionManager.select(id);
-  }
-
-  clearSelection(): void {
-    this.selectionManager.clearSelection();
+    const annotation = this.state.getAnnotation(id);
+    this.state.selectGroup(annotation?.groupId || '');
   }
 
   clearSelectionAndEditing(): void {
     this.editManager.stopEditing();
-    this.selectionManager.clearSelection();
+    this.state.deselectAll();
   }
 
   enableEditing(id: string): void {
@@ -385,23 +322,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.redrawAll();
   }
 
-  removeAnnotationStyle(id: string): void {
-    this.styleManager.removeCustomStyle(id);
-    this.redrawAll();
-  }
 
   getTheme(): Theme {
     return this.styleManager.getTheme();
   }
-
-  getSelectedAnnotation(): { id: string; shape: any } | null {
-    return this.selectionManager.getSelected();
-  }
-
-  getHoveredAnnotation(): { id: string; shape: any } | null {
-    return this.selectionManager.getHovered();
-  }
-
 
 
   getAvailableTools(): string[] {
@@ -440,8 +364,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.svgOverlay;
   }
 
-  // Removed createManualSvgOverlay: now always uses core SvgOverlay
-
   /**
    * Manually trigger a resize of the SVG overlay
    */
@@ -451,7 +373,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   destroy(): void {
     // Clean up managers
-    this.selectionManager.destroy();
     this.toolManager.destroy();
     this.crosshair?.destroy();
     // Destroy SVG overlay
@@ -474,7 +395,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     // Add each annotation
     for (const annotation of annotations) {
       // Convert geometry from image to SVG/viewport coordinates for rendering
-        const svgGeometry = this.convertToViewportCoordinates(annotation.target.selector.geometry);
+        const svgGeometry = convertToViewportCoordinates(annotation.target.selector.geometry, this.viewer.viewport);
         const shape = ShapeFactory.createFromGeometry(annotation.id || crypto.randomUUID(), svgGeometry);
         this.state.add(annotation, shape);
     }
@@ -483,25 +404,25 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.redrawAll();
   }
 
-  private onAnnotationCreated(evt: { annotation: Annotation }): void {
+  private onAnnotationCreated(evt: { groupId: string }): void {
     this.emit('create', evt);
   }
 
-  private onAnnotationUpdated(evt: { id: string; changes: Partial<Annotation> }): void {
+  private onAnnotationUpdated(evt: { groupId: string }): void {
     this.emit('update', evt);
     this.redrawAll();
   }
 
-  private onAnnotationDeleted(evt: { id: string }): void {
+  private onAnnotationDeleted(evt: { groupId: string }): void {
     this.emit('delete', evt);
     this.redrawAll();
   }
 
-  private onAnnotationSelected(evt: { id: string }): void {
+  private onAnnotationSelected(evt: { groupId: string }): void {
     this.emit('select', evt);
   }
 
-  private onAnnotationDeselected(evt: { id: string }): void {
+  private onAnnotationDeselected(evt: { groupId: string }): void {
     this.emit('deselect', evt);
   }
 

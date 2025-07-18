@@ -38,8 +38,8 @@ export class TextShape extends BaseShape {
 
     // Set default text styles
     this.text.setAttribute('dominant-baseline', 'hanging');
-    this.background.setAttribute('fill', 'white');
-    this.background.setAttribute('fill-opacity', '0.8');
+    // this.background.setAttribute('fill', 'white'); // Removed fill
+    // this.background.setAttribute('fill-opacity', '0.8'); // Removed fill
 
     this.update(geometry);
   }
@@ -59,18 +59,23 @@ export class TextShape extends BaseShape {
 
     // Update text content and position
     this.text.textContent = text;
-    this.text.setAttribute('x', x.toString());
-    this.text.setAttribute('y', y.toString());
+    // Center the text in the rectangle
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    this.text.setAttribute('x', centerX.toString());
+    this.text.setAttribute('y', centerY.toString());
+    this.text.setAttribute('text-anchor', 'middle');
+    this.text.setAttribute('dominant-baseline', 'middle');
 
     // Set default text styles
     this.text.setAttribute('font-family', 'Arial');
     this.text.setAttribute('font-size', '12px');
     this.text.setAttribute('font-weight', 'normal');
     this.text.setAttribute('font-style', 'normal');
-    this.text.setAttribute('fill', 'black');
+    this.text.setAttribute('fill', 'black'); // Default fill restored
     this.text.setAttribute('text-decoration', 'none');
-    this.text.setAttribute('text-anchor', 'start');
-    this.text.setAttribute('dominant-baseline', 'hanging');
+    // Remove or override any other values for text-anchor and dominant-baseline
+    // (already set above)
 
     // Update background
     this.background.setAttribute('x', x.toString());
@@ -84,7 +89,7 @@ export class TextShape extends BaseShape {
       if (geometry.style.fontSize) this.text.style.fontSize = `${geometry.style.fontSize}px`;
       if (geometry.style.fontWeight) this.text.style.fontWeight = geometry.style.fontWeight;
       if (geometry.style.fontStyle) this.text.style.fontStyle = geometry.style.fontStyle;
-      if (geometry.style.fill) this.text.setAttribute('fill', geometry.style.fill);
+      if (geometry.style.fill) this.text.setAttribute('fill', geometry.style.fill); // Allow override
       if (geometry.style.stroke) this.text.setAttribute('stroke', geometry.style.stroke);
       if (geometry.style.strokeWidth) this.text.setAttribute('stroke-width', geometry.style.strokeWidth.toString());
     }
@@ -163,9 +168,10 @@ export class TextShape extends BaseShape {
       handle.setAttribute('cy', pos.y.toString());
       handle.setAttribute('r', '6');
       handle.setAttribute('class', 'a9s-handle');
-      this.group.appendChild(handle);
+      this.handlesGroup.appendChild(handle);
       return handle;
     });
+    super.showEditHandles();
   }
 
   protected override hideEditHandles(): void {
@@ -187,5 +193,16 @@ export class TextShape extends BaseShape {
       handle.setAttribute('cx', positions[i].x.toString());
       handle.setAttribute('cy', positions[i].y.toString());
     });
+  }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
+    const tol = 5;
+    const left = Math.abs(point.x - this.x) <= tol && point.y >= this.y - tol && point.y <= this.y + this.height + tol;
+    const right = Math.abs(point.x - (this.x + this.width)) <= tol && point.y >= this.y - tol && point.y <= this.y + this.height + tol;
+    const top = Math.abs(point.y - this.y) <= tol && point.x >= this.x - tol && point.x <= this.x + this.width + tol;
+    const bottom = Math.abs(point.y - (this.y + this.height)) <= tol && point.x >= this.x - tol && point.x <= this.x + this.width + tol;
+    // Exclude inside
+    const inside = point.x > this.x + tol && point.x < this.x + this.width - tol && point.y > this.y + tol && point.y < this.y + this.height - tol;
+    return (left || right || top || bottom) && !inside;
   }
 }

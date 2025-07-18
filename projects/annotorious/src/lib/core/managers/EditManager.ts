@@ -1,5 +1,5 @@
 import { Shape } from '../../shapes/base';
-import { Point } from '../../types/shape.types';
+import { Point, Geometry } from '../../types/shape.types';
 import { EventEmitter } from '../events/EventEmitter';
 
 export interface EditHandle {
@@ -39,6 +39,11 @@ export class EditManager extends EventEmitter {
   }
 
   stopEditing(): void {
+    if (this.editingShape && this.editingId) {
+      // Emit updateGeometry event with the latest geometry
+      const geometry = this.editingShape.getGeometry();
+      this.emit('updateGeometry', { id: this.editingId, geometry });
+    }
     if (this.editingShape) {
       this.editingShape.getEditHandles().forEach(handle => {
         const el = (handle as any).element;

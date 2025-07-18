@@ -93,7 +93,7 @@ export interface AnnotationTarget {
 export interface Annotation {
   id: string;
   type: string; // 'shape', 'label', 'group', etc.
-  groupId?: string;
+  groupId: string;
   body: AnnotationBody[];
   target: AnnotationTarget;
   style?: Record<string, any>;

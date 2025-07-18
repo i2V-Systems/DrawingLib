@@ -72,6 +72,10 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     if (this.selected !== selected) {
       this.selected = selected;
       this.shapeElement.classList.toggle('selected', selected);
+      if (selected) {
+        this.shapeElement.style.stroke = '#007bff';
+        this.shapeElement.style.strokeWidth = '3';
+      }
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
     }
   }
@@ -112,7 +116,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Set default styles for the shape
    */
   protected setDefaultStyles(): void {
-    this.shapeElement.setAttribute('fill', 'none');
+    // this.shapeElement.setAttribute('fill', 'none'); // Removed fill
     this.shapeElement.setAttribute('stroke', '#000');
     this.shapeElement.setAttribute('stroke-width', '2');
     this.shapeElement.classList.add('annotation-shape');
@@ -172,8 +176,6 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    */
   applyStyle(style: ShapeStyle): void {
     if (this.shapeElement) {
-      this.shapeElement.style.fill = style.fill;
-      this.shapeElement.style.fillOpacity = style.fillOpacity.toString();
       this.shapeElement.style.stroke = style.stroke;
       this.shapeElement.style.strokeWidth = style.strokeWidth.toString();
       this.shapeElement.style.strokeOpacity = style.strokeOpacity.toString();
@@ -240,5 +242,16 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   getEditHandles(): { x: number; y: number; type: string }[] {
     // Override in subclasses to return specific handles
     return [];
+  }
+
+
+
+  /**
+   * Determines if a point is on the circumference/edge of the shape.
+   * Subclasses can override for custom hit detection.
+   */
+  protected isOnCircumference(point: { x: number; y: number }): boolean {
+    // Default: use containsPoint (with tolerance for edge)
+    return this.containsPoint(point);
   }
 }

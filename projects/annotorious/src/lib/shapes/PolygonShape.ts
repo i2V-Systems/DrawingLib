@@ -84,4 +84,24 @@ export class PolygonShape extends BaseShape {
       element: handle
     }));
   }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
+    const tol = 5;
+    if (!this.points || this.points.length < 2) return false;
+    for (let i = 0; i < this.points.length; i++) {
+      const a = this.points[i];
+      const b = this.points[(i + 1) % this.points.length];
+      // Distance from point to segment ab
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const lengthSq = dx * dx + dy * dy;
+      let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
+      t = Math.max(0, Math.min(1, t));
+      const projX = a.x + t * dx;
+      const projY = a.y + t * dy;
+      const dist = Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
+      if (dist <= tol) return true;
+    }
+    return false;
+  }
 }

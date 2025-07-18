@@ -136,4 +136,10 @@ export class EllipseShape extends BaseShape {
       handle.setAttribute('cy', positions[i].y.toString());
     });
   }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
+    // Ellipse equation: ((x-cx)/rx)^2 + ((y-cy)/ry)^2 = 1
+    const norm = Math.pow((point.x - this.cx) / this.rx, 2) + Math.pow((point.y - this.cy) / this.ry, 2);
+    return Math.abs(norm - 1) <= 0.1; // ~5px tolerance for most ellipses
+  }
 }

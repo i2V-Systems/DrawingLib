@@ -1,3 +1,5 @@
+import { Annotation } from "../types";
+
 export const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
 export class SVGUtils {
@@ -92,28 +94,64 @@ export class SVGUtils {
       (points.length > 2 ? ' Z' : '');
   }
 
-  /**
-   * Get the bounding box of multiple points
-   */
-  static getBoundingBox(points: { x: number; y: number }[]): { x: number; y: number; width: number; height: number } {
-    if (points.length === 0) {
-      return { x: 0, y: 0, width: 0, height: 0 };
+  static getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    const geom = annotation.target?.selector?.geometry;
+      if (!geom) return null;
+      switch (geom.type) {
+        case 'rectangle':
+          return {
+            minX: geom.x,
+            minY: geom.y,
+            maxX: geom.x + geom.width,
+            maxY: geom.y + geom.height
+          };
+        case 'polygon':
+        case 'freehand':
+          if (geom.points && geom.points.length) {
+            const xs = geom.points.map((p: any) => p.x);
+            const ys = geom.points.map((p: any) => p.y);
+            return {
+              minX: Math.min(...xs),
+              minY: Math.min(...ys),
+              maxX: Math.max(...xs),
+              maxY: Math.max(...ys)
+            };
+          }
+          break;
+        case 'circle':
+          return {
+            minX: geom.cx - geom.r,
+            minY: geom.cy - geom.r,
+            maxX: geom.cx + geom.r,
+            maxY: geom.cy + geom.r
+          };
+        case 'ellipse':
+          return {
+            minX: geom.cx - geom.rx,
+            minY: geom.cy - geom.ry,
+            maxX: geom.cx + geom.rx,
+            maxY: geom.cy + geom.ry
+          };
+        case 'text':
+          return {
+            minX: geom.x,
+            minY: geom.y,
+            maxX: geom.x + geom.width,
+            maxY: geom.y + geom.height
+          };
+        case 'point':
+          // Use a small box around the point for hit testing
+          const size = (geom.style?.size || 6) / 2;
+          return {
+            minX: geom.x - size,
+            minY: geom.y - size,
+            maxX: geom.x + size,
+            maxY: geom.y + size
+          };
+        default:
+          return null;
     }
-
-    const xs = points.map(p => p.x);
-    const ys = points.map(p => p.y);
-
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
+    return null;
   }
 
   /**
@@ -347,5 +385,66 @@ export class SVGUtils {
              bbox2.x + bbox2.width < bbox1.x ||
              bbox1.y + bbox1.height < bbox2.y ||
              bbox2.y + bbox2.height < bbox1.y);
+  }
+}
+
+export function convertToViewportCoordinates(geometry: any, viewport: any): any {
+  const imageToViewport = (point: any) => {
+    const viewportPoint = viewport.imageToViewportCoordinates(point.x, point.y);
+    return { x: viewportPoint.x, y: viewportPoint.y };
+  };
+
+  switch (geometry.type) {
+    case 'rectangle': {
+      const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
+      const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
+      return {
+        ...geometry,
+        x: topLeft.x,
+        y: topLeft.y,
+        width: bottomRight.x - topLeft.x,
+        height: bottomRight.y - topLeft.y
+      };
+    }
+    case 'circle': {
+      const center = imageToViewport({ x: geometry.cx, y: geometry.cy });
+      const radiusPoint = imageToViewport({ x: geometry.cx + geometry.r, y: geometry.cy });
+      const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
+      return {
+        ...geometry,
+        cx: center.x,
+        cy: center.y,
+        r: radius
+      };
+    }
+    case 'polygon':
+    case 'freehand': {
+      const viewportPoints = geometry.points.map((point: any) => imageToViewport(point));
+      return {
+        ...geometry,
+        points: viewportPoints
+      };
+    }
+    case 'point': {
+      const viewportPoint = imageToViewport({ x: geometry.x, y: geometry.y });
+      return {
+        ...geometry,
+        x: viewportPoint.x,
+        y: viewportPoint.y
+      };
+    }
+    case 'text': {
+      const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
+      const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
+      return {
+        ...geometry,
+        x: topLeft.x,
+        y: topLeft.y,
+        width: bottomRight.x - topLeft.x,
+        height: bottomRight.y - topLeft.y
+      };
+    }
+    default:
+      return geometry;
   }
 }

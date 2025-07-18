@@ -1,4 +1,4 @@
-import { Geometry, Point } from '../types/shape.types';
+import { Geometry, Point, RectangleGeometry } from '../types/shape.types';
 
 export interface HitTestResult {
   hit: boolean;
@@ -18,13 +18,7 @@ export class HitDetection {
     }
 
     const points = geometry.points;
-    
-    // First check if point is inside the polygon
-    if (this.isPointInPolygon(point, points)) {
-      return { hit: true, distance: 0, tolerance };
-    }
-
-    // Then check distance to polygon boundary
+    // Only check distance to polygon boundary (not inside)
     const distance = this.distanceToPolygonBoundary(point, points);
     return {
       hit: distance <= tolerance,
@@ -37,18 +31,8 @@ export class HitDetection {
    * Test if a point hits a rectangle
    */
   static hitTestRectangle(point: Point, geometry: Geometry, tolerance: number = this.DEFAULT_TOLERANCE): HitTestResult {
-    if (geometry.type !== 'rectangle') {
-      return { hit: false, distance: Infinity, tolerance };
-    }
-
-    const { x, y, width, height } = geometry;
-    
-    // Check if point is inside rectangle
-    if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) {
-      return { hit: true, distance: 0, tolerance };
-    }
-
-    // Calculate distance to rectangle boundary
+    const { x, y, width, height } = geometry as RectangleGeometry;
+    // Only check distance to rectangle boundary (not inside)
     const distance = this.distanceToRectangleBoundary(point, { x, y, width, height });
     return {
       hit: distance <= tolerance,
@@ -84,18 +68,14 @@ export class HitDetection {
     }
 
     const { cx, cy, rx, ry } = geometry;
-    
     // Normalize point coordinates
     const nx = (point.x - cx) / rx;
     const ny = (point.y - cy) / ry;
-    
-    // Check if point is on ellipse boundary (within tolerance)
-    const distance = Math.abs(nx * nx + ny * ny - 1);
-    const actualDistance = distance * Math.min(rx, ry); // Approximate pixel distance
-    
+    // Only check distance to ellipse border (not inside)
+    const distance = Math.abs(nx * nx + ny * ny - 1) * Math.min(rx, ry); // Approximate pixel distance
     return {
-      hit: actualDistance <= tolerance,
-      distance: actualDistance,
+      hit: distance <= tolerance,
+      distance,
       tolerance
     };
   }
@@ -107,9 +87,26 @@ export class HitDetection {
     if (geometry.type !== 'point') {
       return { hit: false, distance: Infinity, tolerance };
     }
-
+    // No change needed: a point is always a border
     const distance = Math.sqrt((point.x - geometry.x) ** 2 + (point.y - geometry.y) ** 2);
-    
+    return {
+      hit: distance <= tolerance,
+      distance,
+      tolerance
+    };
+  }
+
+  /**
+   * Test if a point hits a rectangle
+   */
+  static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DEFAULT_TOLERANCE): HitTestResult {
+    const { x, y, width, height } = geometry as RectangleGeometry;
+    // Check if point is inside rectangle
+    if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) {
+      return { hit: true, distance: 0, tolerance };
+    }
+    // Only check distance to rectangle boundary (not inside)
+    const distance = this.distanceToRectangleBoundary(point, { x, y, width, height });
     return {
       hit: distance <= tolerance,
       distance,
@@ -132,6 +129,8 @@ export class HitDetection {
         return this.hitTestEllipse(point, geometry, tolerance);
       case 'point':
         return this.hitTestPoint(point, geometry, tolerance);
+      case 'text':
+        return this.hitTestText(point, geometry, tolerance);
       default:
         return { hit: false, distance: Infinity, tolerance };
     }

@@ -80,6 +80,7 @@ export const darkTheme: Theme = {
 export class StyleManager extends EventEmitter {
   private currentTheme: Theme;
   private customStyles: Map<string, Partial<ShapeStyle>>;
+  private annotationStyles: Map<string, ShapeStyle> = new Map();
 
   constructor(theme: Theme = lightTheme) {
     super();
@@ -107,6 +108,9 @@ export class StyleManager extends EventEmitter {
    */
   setCustomStyle(id: string, style: Partial<ShapeStyle>): void {
     this.customStyles.set(id, style);
+    // Update annotationStyles with the new custom style merged over the default style
+    const merged = this.getMergedStyle(id, style);
+    this.annotationStyles.set(id, merged);
     this.emit('styleChanged', { id, style });
   }
 
@@ -115,6 +119,7 @@ export class StyleManager extends EventEmitter {
    */
   removeCustomStyle(id: string): void {
     this.customStyles.delete(id);
+    this.annotationStyles.delete(id); // Also remove from annotationStyles
     this.emit('styleRemoved', { id });
   }
 
@@ -128,6 +133,19 @@ export class StyleManager extends EventEmitter {
       : { ...this.currentTheme.shapes };
   }
 
+  getMergedStyle(id: string, partial?: Partial<ShapeStyle>): ShapeStyle {
+    const base = this.getStyle(id);
+    return { ...base, ...partial };
+  }
+
+  setAnnotationStyle(id: string, style: Partial<ShapeStyle>) {
+    const merged = this.getMergedStyle(id, style);
+    this.annotationStyles.set(id, merged);
+  }
+
+  getAnnotationStyle(id: string): ShapeStyle | undefined {
+    return this.annotationStyles.get(id);
+  }
 
   /**
    * Create CSS styles for SVG elements
@@ -172,5 +190,6 @@ export class StyleManager extends EventEmitter {
    */
   destroy(): void {
     this.customStyles.clear();
+    this.annotationStyles.clear();
   }
 }

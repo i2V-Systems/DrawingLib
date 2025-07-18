@@ -64,27 +64,23 @@ export class FreehandShape extends BaseShape {
   }
 
   override containsPoint(point: { x: number; y: number }): boolean {
-    if (!this.geometry.points || this.geometry.points.length < 3) {
-      return false;
+    const tol = 5;
+    if (!this.geometry.points || this.geometry.points.length < 2) return false;
+    for (let i = 0; i < this.geometry.points.length - 1; i++) {
+      const a = this.geometry.points[i];
+      const b = this.geometry.points[i + 1];
+      // Distance from point to segment ab
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const lengthSq = dx * dx + dy * dy;
+      let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
+      t = Math.max(0, Math.min(1, t));
+      const projX = a.x + t * dx;
+      const projY = a.y + t * dy;
+      const dist = Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
+      if (dist <= tol) return true;
     }
-
-    // Use ray casting algorithm for polygon containment
-    let inside = false;
-    const n = this.geometry.points.length;
-    
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = this.geometry.points[i].x;
-      const yi = this.geometry.points[i].y;
-      const xj = this.geometry.points[j].x;
-      const yj = this.geometry.points[j].y;
-      
-      if (((yi > point.y) !== (yj > point.y)) && 
-          (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-    }
-    
-    return inside;
+    return false;
   }
 
   public override getEditHandles(): { x: number; y: number; type: string; element: SVGCircleElement }[] {

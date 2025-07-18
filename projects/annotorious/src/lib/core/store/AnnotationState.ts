@@ -5,33 +5,33 @@ import { StyleManager } from '../managers/StyleManager';
 import { SpatialIndex, SpatialItem } from './SpatialIndex';
 import { HitDetection } from '../../utils/HitDetection';
 import { Point } from '../../types/shape.types';
-import { GroupManager } from '../managers/GroupManager';
+import { SVGUtils } from '../../utils';
+import { ShapeStyle } from '../managers/StyleManager';
+
 
 interface AnnotationStateEvents {
-  create: { annotation: Annotation };
-  update: { id: string; changes: Annotation };
-  delete: { id: string };
-  select: { id: string };
-  deselect: { id: string };
+  create: { groupId: string };
+  update: { groupId: string };
+  delete: { groupId: string };
+  select: { groupId: string };
+  deselect: { groupId: string };
 }
 
 export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   private annotations: Map<string, Annotation>;
   private shapes: Map<string, Shape>;
-  private selectedId: string | null;
+  private selectedIds: Set<string>;
   private readonly styleManager: StyleManager;
   private readonly spatialIndex: SpatialIndex;
-  public readonly groupManager: GroupManager;
 
 
   constructor(styleManager: StyleManager) {
     super();
     this.annotations = new Map();
     this.shapes = new Map();
-    this.selectedId = null;
+    this.selectedIds = new Set();
     this.styleManager = styleManager;
     this.spatialIndex = new SpatialIndex();
-    this.groupManager = new GroupManager(this);
 
     // Listen for style changes
     this.styleManager.on('styleChanged', ({ id }) => {
@@ -44,176 +44,143 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   }
 
   // Restore getAnnotationBBox for annotation geometry (image coordinates)
-  private getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
-    const geom = annotation.target?.selector?.geometry;
-      if (!geom) return null;
-      switch (geom.type) {
-        case 'rectangle':
-          return {
-            minX: geom.x,
-            minY: geom.y,
-            maxX: geom.x + geom.width,
-            maxY: geom.y + geom.height
-          };
-        case 'polygon':
-        case 'freehand':
-          if (geom.points && geom.points.length) {
-            const xs = geom.points.map((p: any) => p.x);
-            const ys = geom.points.map((p: any) => p.y);
-            return {
-              minX: Math.min(...xs),
-              minY: Math.min(...ys),
-              maxX: Math.max(...xs),
-              maxY: Math.max(...ys)
-            };
-          }
-          break;
-        case 'circle':
-          return {
-            minX: geom.cx - geom.r,
-            minY: geom.cy - geom.r,
-            maxX: geom.cx + geom.r,
-            maxY: geom.cy + geom.r
-          };
-        case 'ellipse':
-          return {
-            minX: geom.cx - geom.rx,
-            minY: geom.cy - geom.ry,
-            maxX: geom.cx + geom.rx,
-            maxY: geom.cy + geom.ry
-          };
-        case 'text':
-          return {
-            minX: geom.x,
-            minY: geom.y,
-            maxX: geom.x + geom.width,
-            maxY: geom.y + geom.height
-          };
-        case 'point':
-          // Use a small box around the point for hit testing
-          const size = (geom.style?.size || 6) / 2;
-          return {
-            minX: geom.x - size,
-            minY: geom.y - size,
-            maxX: geom.x + size,
-            maxY: geom.y + size
-          };
-        default:
-          return null;
-    }
-    return null;
-  }
+
 
   add(annotation: Annotation, shape?: Shape): void {
     const id = annotation.id || crypto.randomUUID();
     annotation.id = id;
-
     this.annotations.set(id, annotation);
-    if (annotation.groupId) {
-      this.groupManager.addToGroup(annotation.groupId, id);
-    }
     if (shape) {
       this.shapes.set(id, shape);
-      // Add to spatial index using annotation geometry (image coordinates)
-      const bbox = this.getAnnotationBBox(annotation);
+      const bbox = SVGUtils.getAnnotationBBox(annotation);
       if (bbox) {
         this.spatialIndex.insert({ ...bbox, id });
       }
-      // Apply initial style
-      const style = this.styleManager.getStyle(id);
+      const style = this.styleManager.getMergedStyle(id, annotation.style);
+      this.styleManager.setAnnotationStyle(id, annotation.style || {});
       shape.applyStyle(style);
     }
-    this.emit('create', { annotation });
+    this.emit('create', { groupId: annotation.groupId });
   }
 
   update(id: string, changes: Partial<Annotation>): void {
     const current = this.annotations.get(id);
-    if (current) {
-      const updated = { ...current, ...changes };
-      this.annotations.set(id, updated);
-
-      // Update spatial index if geometry changed
-      if (changes.target?.selector?.geometry) {
-        const oldBbox = this.getAnnotationBBox(current);
-        const newBbox = this.getAnnotationBBox(updated);
-        if (oldBbox && newBbox) {
-          this.spatialIndex.update({ ...oldBbox, id }, { ...newBbox, id });
-        }
+    if(!current) return;
+    const updated = { ...current, ...changes };
+    this.annotations.set(id, updated);
+    if (changes.target?.selector?.geometry) {
+      const oldBbox = SVGUtils.getAnnotationBBox(current);
+      const newBbox = SVGUtils.getAnnotationBBox(updated);
+      if (oldBbox && newBbox) {
+        this.spatialIndex.update({ ...oldBbox, id }, { ...newBbox, id });
       }
-
-      // Update shape if geometry changed
-      if (changes.target?.selector?.geometry) {
-        const shape = this.shapes.get(id);
-        if (shape) {
-          shape.update(changes.target.selector.geometry);
-          // Reapply style after geometry update
-          const style = this.styleManager.getStyle(id);
-          shape.applyStyle(style);
-        }
-      }
-
-      this.emit('update', { id, changes: updated });
     }
+    if (changes.target?.selector?.geometry) {
+      const shape = this.shapes.get(id);
+      if (shape) {
+        shape.update(changes.target.selector.geometry);
+        const style = this.styleManager.getStyle(id);
+        shape.applyStyle(style);
+      }
+    }
+    this.emit('update', { groupId: updated.groupId });
   }
 
   remove(id: string): void {
     const annotation = this.annotations.get(id);
-    if (annotation) {
-      if (annotation.groupId) {
-        this.groupManager.removeFromGroup(annotation.groupId, id);
-      }
-      // Remove from spatial index using annotation geometry (image coordinates)
-      const bbox = this.getAnnotationBBox(annotation);
-      if (bbox) {
-        this.spatialIndex.remove({ ...bbox, id });
-      }
+    if (!annotation) return;
+    const groupId = annotation.groupId;
+    const groupAnnotations = this.getGroupAnnotations(groupId);
+    groupAnnotations.forEach(a => {
+      this._removeSingle(a.id, false);
+    });
+    this.emit('delete', { groupId });
+  }
 
-      this.annotations.delete(id);
-      
-      const shape = this.shapes.get(id);
-      if (shape) {
-        shape.destroy();
-        this.shapes.delete(id);
-      }
-
-      // Remove any custom style
-      this.styleManager.removeCustomStyle(id);
-
-      if (this.selectedId === id) {
-        this.selectedId = null;
-      }
-
-      this.emit('delete', { id });
+  private _removeSingle(id: string, emit: boolean): void {
+    const annotation = this.annotations.get(id);
+    if (!annotation) return;
+    // Remove from spatial index using annotation geometry (image coordinates)
+    const bbox = SVGUtils.getAnnotationBBox(annotation);
+    if (bbox) {
+      this.spatialIndex.remove({ ...bbox, id });
     }
+    this.annotations.delete(id);
+    const shape = this.shapes.get(id);
+    if (shape) {
+      shape.destroy();
+      this.shapes.delete(id);
+    }
+    // Remove any custom style
+    this.styleManager.removeCustomStyle(id);
+    if (this.selectedIds.has(id)) {
+      this.selectedIds.delete(id);
+    }
+    // No per-id delete event; only groupId events are emitted in remove()
   }
 
   select(id: string): void {
-    if (id !== this.selectedId) {
-      // Remove selection style from previously selected
-      if (this.selectedId) {
-        const prevShape = this.shapes.get(this.selectedId);
-        if (prevShape) {
-          prevShape.setSelected(false);
-        }
-      }
-
-      // Apply selection style to newly selected
-      const shape = this.shapes.get(id);
-      if (shape) {
-        shape.setSelected(true);
-        this.selectedId = id;
-      }
-    }
+    const annotation = this.annotations.get(id);
+    if (!annotation) return;
+    this.selectGroup(annotation.groupId);
   }
 
-  deselect(): void {
-    if (this.selectedId) {
-      const shape = this.shapes.get(this.selectedId);
+
+  /**
+   * Select all annotations in a group and emit once with groupId
+   */
+  selectGroup(groupId: string): void {
+    const groupAnnotations = this.getGroupAnnotations(groupId);
+    groupAnnotations.forEach(a => {
+      if (!this.selectedIds.has(a.id)) {
+        const shape = this.shapes.get(a.id);
+        if (shape) shape.setSelected(true);
+        this.selectedIds.add(a.id);
+      }
+    });
+    this.emit('select', { groupId });
+  }
+
+  /**
+   * Deselect all annotations in a group and emit once with groupId
+   */
+  deselectGroup(groupId: string): void {
+    const groupAnnotations = this.getGroupAnnotations(groupId);
+    groupAnnotations.forEach(a => {
+      if (this.selectedIds.has(a.id)) {
+        const shape = this.shapes.get(a.id);
+        if (shape) {
+          shape.setSelected(false);
+          const style = this.styleManager.getAnnotationStyle(a.id) || this.styleManager.getStyle(a.id);
+          if (style) shape.applyStyle(style);
+        }
+        this.selectedIds.delete(a.id);
+      }
+    });
+    this.emit('deselect', { groupId });
+  }
+
+  /**
+   * Deselect all currently selected annotations and emit once with groupId.
+   * Assumes all selectedIds belong to the same group.
+   */
+  deselectAll(): void {
+    if (this.selectedIds.size === 0) return;
+    // Get the groupId from any selected annotation
+    const firstId = this.selectedIds.values().next().value ?? '';
+    const annotation = this.annotations.get(firstId);
+    if (!annotation) return;
+    const groupId = annotation.groupId;
+    this.selectedIds.forEach(id => {
+      const shape = this.shapes.get(id);
       if (shape) {
         shape.setSelected(false);
+        const style = this.styleManager.getAnnotationStyle(id) || this.styleManager.getStyle(id);
+        if (style) shape.applyStyle(style);
       }
-      this.selectedId = null;
-    }
+    });
+    this.selectedIds.clear();
+    this.emit('deselect', { groupId });
   }
 
   getAnnotation(id: string): Annotation | undefined {
@@ -224,14 +191,6 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return this.shapes.get(id);
   }
 
-  getSelectedAnnotation(): { id: string; annotation: Annotation } | null {
-    if (this.selectedId) {
-      const annotation = this.annotations.get(this.selectedId);
-      return annotation ? { id: this.selectedId, annotation } : null;
-    }
-    return null;
-  }
-
   getAll(): Annotation[] {
     return Array.from(this.annotations.values());
   }
@@ -240,7 +199,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.shapes.forEach(shape => shape.destroy());
     this.annotations.clear();
     this.shapes.clear();
-    this.selectedId = null;
+    this.selectedIds.clear();
     this.spatialIndex.clear();
   }
 
@@ -284,6 +243,16 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return bestHit;
   }
 
+  getGroupIdForAnnotation(annotationId: string): string | undefined {
+    const annotation = this.annotations.get(annotationId);
+    return annotation?.groupId;
+  }
+
+
+  getGroupAnnotations(groupId: string): Annotation[] {
+    return Array.from(this.annotations.values())
+      .filter(a => a.groupId === groupId);
+  }
 
 
 }

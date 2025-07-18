@@ -109,4 +109,11 @@ export class CircleShape extends BaseShape {
       handle.setAttribute('cy', positions[i].y.toString());
     });
   }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
+    const dx = point.x - this.cx;
+    const dy = point.y - this.cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return Math.abs(dist - this.r) <= 5;
+  }
 }

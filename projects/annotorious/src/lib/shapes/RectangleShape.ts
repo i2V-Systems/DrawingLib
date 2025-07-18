@@ -128,4 +128,15 @@ export class RectangleShape extends BaseShape {
       handle.setAttribute('cy', positions[i].y.toString());
     });
   }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
+    const tol = 5;
+    const left = Math.abs(point.x - this.x) <= tol && point.y >= this.y - tol && point.y <= this.y + this.height + tol;
+    const right = Math.abs(point.x - (this.x + this.width)) <= tol && point.y >= this.y - tol && point.y <= this.y + this.height + tol;
+    const top = Math.abs(point.y - this.y) <= tol && point.x >= this.x - tol && point.x <= this.x + this.width + tol;
+    const bottom = Math.abs(point.y - (this.y + this.height)) <= tol && point.x >= this.x - tol && point.x <= this.x + this.width + tol;
+    // Exclude inside
+    const inside = point.x > this.x + tol && point.x < this.x + this.width - tol && point.y > this.y + tol && point.y < this.y + this.height - tol;
+    return (left || right || top || bottom) && !inside;
+  }
 }
