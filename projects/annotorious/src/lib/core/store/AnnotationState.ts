@@ -127,58 +127,52 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
 
 
   /**
-   * Select all annotations in a group and emit once with groupId
+   * Select all annotations in a group with proper style management
    */
   selectGroup(groupId: string): void {
+    // **KEY FIX**: Always deselect previous selections first
+    if (this.selectedIds.size > 0) {
+      const currentlySelected = Array.from(this.selectedIds);
+      const firstSelectedAnnotation = this.annotations.get(currentlySelected[0]);
+      
+      if (firstSelectedAnnotation && firstSelectedAnnotation.groupId !== groupId) {
+        this.deselectAll();
+      }
+    }
+
     const groupAnnotations = this.getGroupAnnotations(groupId);
     groupAnnotations.forEach(a => {
       if (!this.selectedIds.has(a.id)) {
         const shape = this.shapes.get(a.id);
-        if (shape) shape.setSelected(true);
+        if (shape) {
+          shape.setSelected(true, this.styleManager, a.id);
+        }
         this.selectedIds.add(a.id);
       }
     });
+
     this.emit('select', { groupId });
   }
 
   /**
-   * Deselect all annotations in a group and emit once with groupId
-   */
-  deselectGroup(groupId: string): void {
-    const groupAnnotations = this.getGroupAnnotations(groupId);
-    groupAnnotations.forEach(a => {
-      if (this.selectedIds.has(a.id)) {
-        const shape = this.shapes.get(a.id);
-        if (shape) {
-          shape.setSelected(false);
-          const style = this.styleManager.getAnnotationStyle(a.id) || this.styleManager.getStyle(a.id);
-          if (style) shape.applyStyle(style);
-        }
-        this.selectedIds.delete(a.id);
-      }
-    });
-    this.emit('deselect', { groupId });
-  }
-
-  /**
-   * Deselect all currently selected annotations and emit once with groupId.
-   * Assumes all selectedIds belong to the same group.
+   * Deselect all with proper style restoration
    */
   deselectAll(): void {
     if (this.selectedIds.size === 0) return;
-    // Get the groupId from any selected annotation
+
     const firstId = this.selectedIds.values().next().value ?? '';
     const annotation = this.annotations.get(firstId);
     if (!annotation) return;
+    
     const groupId = annotation.groupId;
+
     this.selectedIds.forEach(id => {
       const shape = this.shapes.get(id);
       if (shape) {
-        shape.setSelected(false);
-        const style = this.styleManager.getAnnotationStyle(id) || this.styleManager.getStyle(id);
-        if (style) shape.applyStyle(style);
+        shape.setSelected(false, this.styleManager, id);
       }
     });
+
     this.selectedIds.clear();
     this.emit('deselect', { groupId });
   }
@@ -206,8 +200,14 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   /**
    * Query annotations at a given point (SVG/image coordinates)
    */
-  queryAtPoint(point: { x: number; y: number }): string[] {
-    const hits = this.spatialIndex.search(point);
+  queryAtPoint(point: { x: number; y: number }, tolerance: number = 5): string[] {
+    const searchBox = {
+      minX: point.x - tolerance,
+      minY: point.y - tolerance,
+      maxX: point.x + tolerance,
+      maxY: point.y + tolerance
+    };
+    const hits = this.spatialIndex.search(searchBox);
     return hits.map(item => item.id);
   }
 
@@ -215,10 +215,9 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
    * Find the best hit annotation at a given point using precise hit detection
    */
   findHitAnnotation(point: Point, tolerance: number = 5): { id: string; distance: number } | null {
-    // First, get candidates using spatial index
-    const candidates = this.spatialIndex.search(point);
-    
-    if (candidates.length === 0) {
+    // Get candidates using tolerance-aware spatial index search
+    const candidateIds = this.queryAtPoint(point, tolerance);
+    if (candidateIds.length === 0) {
       return null;
     }
 
@@ -226,17 +225,16 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     let minDistance = Infinity;
 
     // Test each candidate with precise hit detection
-    for (const candidate of candidates) {
-      const annotation = this.annotations.get(candidate.id);
+    for (const id of candidateIds) {
+      const annotation = this.annotations.get(id);
       if (!annotation || !annotation.target?.selector?.geometry) {
         continue;
       }
 
       const hitResult = HitDetection.hitTest(point, annotation.target.selector.geometry, tolerance);
-      
       if (hitResult.hit && hitResult.distance < minDistance) {
         minDistance = hitResult.distance;
-        bestHit = { id: candidate.id, distance: hitResult.distance };
+        bestHit = { id, distance: hitResult.distance };
       }
     }
 

@@ -44,8 +44,8 @@ export class PointShape extends BaseShape {
   /**
    * Override setSelected to handle point-specific selection styling
    */
-  override setSelected(selected: boolean): void {
-    super.setSelected(selected);
+  override setSelected(selected: boolean, styleManager?: any, id?: string): void {
+    super.setSelected(selected, styleManager, id);
     if (selected) {
       const currentRadius = parseFloat(this.shapeElement.getAttribute('r') || '5');
       this.shapeElement.setAttribute('r', (currentRadius * 1.2).toString());

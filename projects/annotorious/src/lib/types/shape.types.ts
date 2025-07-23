@@ -69,19 +69,19 @@ export interface TextGeometry extends BaseGeometry {
   type: 'text';
   x: number;
   y: number;
-  width: number;
-  height: number;
   text: string;
-  style?: {
-    fontFamily?: string;
-    fontSize?: number;
-    fontWeight?: string;
-    fontStyle?: string;
-    fill?: string;
-    stroke?: string;
-    strokeWidth?: number;
-  };
+  style?: TextStyle;
 }
+
+export interface TextStyle {
+  fill?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textDecoration?: string;
+}
+
 
 /**
  * Point geometry

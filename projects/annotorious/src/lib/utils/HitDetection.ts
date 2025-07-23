@@ -1,4 +1,5 @@
-import { Geometry, Point, RectangleGeometry } from '../types/shape.types';
+import { Geometry, Point, RectangleGeometry, TextGeometry } from '../types/shape.types';
+import { SVGUtils } from './SVGUtils';
 
 export interface HitTestResult {
   hit: boolean;
@@ -7,7 +8,7 @@ export interface HitTestResult {
 }
 
 export class HitDetection {
-  private static readonly DEFAULT_TOLERANCE = 5; // pixels
+  private static readonly DEFAULT_TOLERANCE = 10; // pixels
 
   /**
    * Test if a point hits a polygon (on the boundary or within tolerance)
@@ -99,20 +100,53 @@ export class HitDetection {
   /**
    * Test if a point hits a rectangle
    */
-  static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DEFAULT_TOLERANCE): HitTestResult {
-    const { x, y, width, height } = geometry as RectangleGeometry;
-    // Check if point is inside rectangle
-    if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) {
-      return { hit: true, distance: 0, tolerance };
-    }
-    // Only check distance to rectangle boundary (not inside)
-    const distance = this.distanceToRectangleBoundary(point, { x, y, width, height });
-    return {
-      hit: distance <= tolerance,
-      distance,
-      tolerance
-    };
+/**
+ * Test if a point hits text (direct text hit, not rectangle bounds)
+ */
+static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DEFAULT_TOLERANCE): HitTestResult {
+  const { x, y, text, style } = geometry as TextGeometry;
+  const fontSize =  style?.fontSize || 16;
+  const fontFamily = style?.fontFamily || 'Arial';
+  
+  // Calculate accurate text bounds
+  const estimatedWidth = SVGUtils.estimateTextWidth(text, fontSize, fontFamily);
+  const estimatedHeight = fontSize * 1.2;
+  
+  const textBounds = {
+    x: x - estimatedWidth / 2,
+    y: y - estimatedHeight / 2,
+    width: estimatedWidth,
+    height: estimatedHeight
+  };
+
+  const distance = this.distanceToTextBounds(point, textBounds);
+  
+  return {
+    hit: distance <= tolerance,
+    distance,
+    tolerance
+  };
+}
+
+
+/**
+ * Calculate distance from point to text bounds
+ */
+private static distanceToTextBounds(point: Point, bounds: { x: number; y: number; width: number; height: number }): number {
+  const { x, y, width, height } = bounds;
+  
+  // If point is inside text bounds, distance is 0
+  if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) {
+    return 0;
   }
+  
+  // Calculate distance to nearest edge
+  const dx = Math.max(x - point.x, 0, point.x - (x + width));
+  const dy = Math.max(y - point.y, 0, point.y - (y + height));
+  
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 
   /**
    * Generic hit test that determines the best method based on geometry type

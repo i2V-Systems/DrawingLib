@@ -65,9 +65,13 @@ export class ShapeFactory {
           type: 'text',
           x: 0,
           y: 0,
-          width: 100,
-          height: 20,
-          text: ''
+          text: '',
+          style: {
+            fontSize: 16,
+            fontFamily: 'Arial',
+            fontWeight: 'normal',
+            fontStyle: 'normal'
+          }
         };
         break;
       

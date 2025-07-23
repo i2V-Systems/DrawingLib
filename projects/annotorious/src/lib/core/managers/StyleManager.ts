@@ -1,10 +1,6 @@
 import { EventEmitter } from '../events/EventEmitter';
 
 export interface ShapeStyle {
-  // Fill
-  fill: string;
-  fillOpacity: number;
-  
   // Stroke
   stroke: string;
   strokeWidth: number;
@@ -17,10 +13,8 @@ export interface ShapeStyle {
   handleSize: number;
   handleStrokeWidth: number;
 
-  // Selection
-  selectedFill: string;
   selectedStroke: string;
-  selectedStrokeWidth: number;
+  selectedStrokeWidth?: number; // Now optional
 
   // Hover
   hoverFill: string;
@@ -38,8 +32,6 @@ export interface Theme {
  */
 export const lightTheme: Theme = {
   shapes: {
-    fill: '#ffffff',
-    fillOpacity: 0.2,
     stroke: '#000000',
     strokeWidth: 2,
     strokeOpacity: 1,
@@ -47,9 +39,7 @@ export const lightTheme: Theme = {
     handleStroke: '#000000',
     handleSize: 8,
     handleStrokeWidth: 1,
-    selectedFill: '#ffffff',
     selectedStroke: '#4a90e2',
-    selectedStrokeWidth: 2,
     hoverFill: '#ffffff',
     hoverStroke: '#4a90e2',
     hoverStrokeWidth: 2
@@ -62,12 +52,9 @@ export const lightTheme: Theme = {
 export const darkTheme: Theme = {
   shapes: {
     ...lightTheme.shapes,
-    fill: '#000000',
-    fillOpacity: 0.2,
     stroke: '#ffffff',
     handleFill: '#000000',
     handleStroke: '#ffffff',
-    selectedFill: '#000000',
     selectedStroke: '#4a90e2',
     hoverFill: '#000000',
     hoverStroke: '#4a90e2'
@@ -81,6 +68,8 @@ export class StyleManager extends EventEmitter {
   private currentTheme: Theme;
   private customStyles: Map<string, Partial<ShapeStyle>>;
   private annotationStyles: Map<string, ShapeStyle> = new Map();
+  // **NEW**: Track original styles before selection
+  private originalStyles: Map<string, ShapeStyle> = new Map();
 
   constructor(theme: Theme = lightTheme) {
     super();
@@ -148,6 +137,40 @@ export class StyleManager extends EventEmitter {
   }
 
   /**
+   * Store original style before applying selection style
+   */
+  storeOriginalStyle(id: string, style: ShapeStyle): void {
+    if (!this.originalStyles.has(id)) {
+      this.originalStyles.set(id, { ...style });
+    }
+  }
+
+  /**
+   * Restore original style when deselecting
+   */
+  restoreOriginalStyle(id: string): ShapeStyle {
+    const original = this.originalStyles.get(id);
+    if (original) {
+      this.originalStyles.delete(id);
+      return original;
+    }
+    return this.getStyle(id);
+  }
+
+  /**
+   * Apply selection style and store original
+   */
+  applySelectionStyle(id: string): ShapeStyle {
+    const currentStyle = this.getAnnotationStyle(id) || this.getStyle(id);
+    this.storeOriginalStyle(id, currentStyle);
+    const baseWidth = this.currentTheme.shapes.strokeWidth;
+    return this.getMergedStyle(id, {
+      stroke: this.currentTheme.shapes.selectedStroke,
+      strokeWidth: baseWidth + 2
+    });
+  }
+
+  /**
    * Create CSS styles for SVG elements
    */
   createSVGStyles(): string {
@@ -155,8 +178,6 @@ export class StyleManager extends EventEmitter {
     
     return `
       .annotation-shape {
-        fill: ${shapes.fill};
-        fill-opacity: ${shapes.fillOpacity};
         stroke: ${shapes.stroke};
         stroke-width: ${shapes.strokeWidth};
         stroke-opacity: ${shapes.strokeOpacity};
@@ -164,7 +185,6 @@ export class StyleManager extends EventEmitter {
       }
 
       .annotation-shape.selected {
-        fill: ${shapes.selectedFill};
         stroke: ${shapes.selectedStroke};
         stroke-width: ${shapes.selectedStrokeWidth};
       }

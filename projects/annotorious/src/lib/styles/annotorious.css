@@ -18,8 +18,8 @@
 /* Basic shape styles */
 .annotation-shape {
   vector-effect: non-scaling-stroke;
-  pointer-events: all;
-  fill: none;
+  pointer-events: visibleStroke;
+  fill: none !important;
   stroke: #000;
   stroke-width: 2;
 }
@@ -96,6 +96,9 @@
   font-family: Arial, sans-serif;
   fill: #000;
   pointer-events: all;
+  stroke: white; /* Optional text outline for better visibility */
+  stroke-width: 0.5;
+  paint-order: stroke fill; /* Ensure stroke appears behind fill */
 }
 
 .freehand-path {
@@ -108,11 +111,6 @@
 
 .editing {
   cursor: move;
-}
-
-.annotation-handle {
-  cursor: pointer;
-  pointer-events: all;
 }
 
 .crosshair-group {

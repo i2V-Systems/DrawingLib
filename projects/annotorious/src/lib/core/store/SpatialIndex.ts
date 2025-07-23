@@ -1,4 +1,5 @@
 import RBush from 'rbush';
+import type RBushType from 'rbush';
 
 export interface SpatialItem {
   minX: number;
@@ -9,7 +10,7 @@ export interface SpatialItem {
 }
 
 export class SpatialIndex {
-  private tree: RBush<SpatialItem>;
+  private tree: InstanceType<typeof RBush>;
 
   constructor() {
     this.tree = new RBush();
@@ -28,14 +29,19 @@ export class SpatialIndex {
     this.insert(newItem);
   }
 
-  search(point: { x: number; y: number }): SpatialItem[] {
-    // RBush search expects a bounding box, so we use a zero-area box at the point
-    return this.tree.search({
-      minX: point.x,
-      minY: point.y,
-      maxX: point.x,
-      maxY: point.y
-    });
+  search(query: { x: number; y: number } | { minX: number; minY: number; maxX: number; maxY: number }): SpatialItem[] {
+    if ('x' in query && 'y' in query) {
+      // Convert point to zero-area bounding box
+      return this.tree.search({
+        minX: query.x,
+        minY: query.y,
+        maxX: query.x,
+        maxY: query.y
+      }) as SpatialItem[];
+    } else {
+      // Use bounding box directly
+      return this.tree.search(query) as SpatialItem[];
+    }
   }
 
   clear() {

@@ -34,7 +34,7 @@ export class SVGUtils {
     }
     return { x: 0, y: 0 };
   }
-  
+
   /**
    * Get the center point of an SVG element
    */
@@ -88,7 +88,7 @@ export class SVGUtils {
    */
   static createPath(points: { x: number; y: number }[]): string {
     if (points.length === 0) return '';
-    
+
     return `M ${points[0].x} ${points[0].y} ` +
       points.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ') +
       (points.length > 2 ? ' Z' : '');
@@ -96,63 +96,102 @@ export class SVGUtils {
 
   static getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
     const geom = annotation.target?.selector?.geometry;
-      if (!geom) return null;
-      switch (geom.type) {
-        case 'rectangle':
+    if (!geom) return null;
+    switch (geom.type) {
+      case 'rectangle':
+        return {
+          minX: geom.x,
+          minY: geom.y,
+          maxX: geom.x + geom.width,
+          maxY: geom.y + geom.height
+        };
+      case 'polygon':
+      case 'freehand':
+        if (geom.points && geom.points.length) {
+          const xs = geom.points.map((p: any) => p.x);
+          const ys = geom.points.map((p: any) => p.y);
           return {
-            minX: geom.x,
-            minY: geom.y,
-            maxX: geom.x + geom.width,
-            maxY: geom.y + geom.height
+            minX: Math.min(...xs),
+            minY: Math.min(...ys),
+            maxX: Math.max(...xs),
+            maxY: Math.max(...ys)
           };
-        case 'polygon':
-        case 'freehand':
-          if (geom.points && geom.points.length) {
-            const xs = geom.points.map((p: any) => p.x);
-            const ys = geom.points.map((p: any) => p.y);
-            return {
-              minX: Math.min(...xs),
-              minY: Math.min(...ys),
-              maxX: Math.max(...xs),
-              maxY: Math.max(...ys)
-            };
-          }
-          break;
-        case 'circle':
-          return {
-            minX: geom.cx - geom.r,
-            minY: geom.cy - geom.r,
-            maxX: geom.cx + geom.r,
-            maxY: geom.cy + geom.r
-          };
-        case 'ellipse':
-          return {
-            minX: geom.cx - geom.rx,
-            minY: geom.cy - geom.ry,
-            maxX: geom.cx + geom.rx,
-            maxY: geom.cy + geom.ry
-          };
+        }
+        break;
+      case 'circle':
+        return {
+          minX: geom.cx - geom.r,
+          minY: geom.cy - geom.r,
+          maxX: geom.cx + geom.r,
+          maxY: geom.cy + geom.r
+        };
+      case 'ellipse':
+        return {
+          minX: geom.cx - geom.rx,
+          minY: geom.cy - geom.ry,
+          maxX: geom.cx + geom.rx,
+          maxY: geom.cy + geom.ry
+        };
         case 'text':
+          // Ensure we have valid font properties
+          const fontSize = geom.style?.fontSize || 16;
+          const fontFamily = geom.style?.fontFamily || 'Arial';
+          
+          // Use more robust text width estimation
+          const estimatedWidth = this.estimateTextWidth(geom.text, fontSize, fontFamily);
+          const estimatedHeight = fontSize * 1.2; // Line height approximation
+          
           return {
-            minX: geom.x,
-            minY: geom.y,
-            maxX: geom.x + geom.width,
-            maxY: geom.y + geom.height
+            minX: geom.x - estimatedWidth / 2,
+            minY: geom.y - estimatedHeight / 2,
+            maxX: geom.x + estimatedWidth / 2,
+            maxY: geom.y + estimatedHeight / 2
           };
-        case 'point':
-          // Use a small box around the point for hit testing
-          const size = (geom.style?.size || 6) / 2;
-          return {
-            minX: geom.x - size,
-            minY: geom.y - size,
-            maxX: geom.x + size,
-            maxY: geom.y + size
-          };
-        default:
-          return null;
+        
+      case 'point':
+        // Use a small box around the point for hit testing
+        const size = (geom.style?.size || 6) / 2;
+        return {
+          minX: geom.x - size,
+          minY: geom.y - size,
+          maxX: geom.x + size,
+          maxY: geom.y + size
+        };
+      default:
+        return null;
     }
     return null;
   }
+
+  /**
+ * Estimate text width for bounding box calculations
+ */
+/**
+ * Estimate text width with better accuracy and fallback handling
+ */
+static estimateTextWidth(text: string, fontSize: number, fontFamily: string): number {
+  if (!text || !fontSize) {
+    return 100; // Fallback width
+  }
+  
+  try {
+    // Try canvas measurement first
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      const metrics = ctx.measureText(text);
+      return metrics.width;
+    }
+  } catch (error) {
+    console.warn('Canvas text measurement failed, using estimation');
+  }
+  
+  // Fallback to character-based estimation
+  const avgCharWidth = fontSize * 0.6; // Average character width ratio
+  return text.length * avgCharWidth;
+}
+
 
   /**
    * Check if a point is inside a polygon
@@ -167,10 +206,10 @@ export class SVGUtils {
 
       const intersect = ((yi > point.y) !== (yj > point.y)) &&
         (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-      
+
       if (intersect) inside = !inside;
     }
-    
+
     return inside;
   }
 
@@ -211,7 +250,7 @@ export class SVGUtils {
     marker.setAttribute('markerUnits', 'userSpaceOnUse');
 
     const path = this.createElement('path');
-    path.setAttribute('d', `M 0 0 L ${width} ${height/2} L 0 ${height} Z`);
+    path.setAttribute('d', `M 0 0 L ${width} ${height / 2} L 0 ${height} Z`);
     path.setAttribute('fill', color);
 
     marker.appendChild(path);
@@ -293,7 +332,7 @@ export class SVGUtils {
     svgPoint.x = point.x;
     svgPoint.y = point.y;
     const transformed = svgPoint.matrixTransform(CTM.inverse());
-    
+
     return { x: transformed.x, y: transformed.y };
   }
 
@@ -308,7 +347,7 @@ export class SVGUtils {
     svgPoint.x = point.x;
     svgPoint.y = point.y;
     const transformed = svgPoint.matrixTransform(CTM);
-    
+
     return { x: transformed.x, y: transformed.y };
   }
 
@@ -360,17 +399,17 @@ export class SVGUtils {
    */
   static createPathFromPoints(points: { x: number; y: number }[]): string {
     if (points.length === 0) return '';
-    
+
     const path = points.map((point, index) => {
       const command = index === 0 ? 'M' : 'L';
       return `${command} ${point.x} ${point.y}`;
     }).join(' ');
-    
+
     // Close the path if it has more than 2 points
     if (points.length > 2) {
       return `${path} Z`;
     }
-    
+
     return path;
   }
 
@@ -380,11 +419,11 @@ export class SVGUtils {
   static elementsOverlap(el1: SVGGraphicsElement, el2: SVGGraphicsElement): boolean {
     const bbox1 = this.getBBox(el1);
     const bbox2 = this.getBBox(el2);
-    
+
     return !(bbox1.x + bbox1.width < bbox2.x ||
-             bbox2.x + bbox2.width < bbox1.x ||
-             bbox1.y + bbox1.height < bbox2.y ||
-             bbox2.y + bbox2.height < bbox1.y);
+      bbox2.x + bbox2.width < bbox1.x ||
+      bbox1.y + bbox1.height < bbox2.y ||
+      bbox2.y + bbox2.height < bbox1.y);
   }
 }
 

@@ -185,14 +185,15 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       const imagePoint = { x: img.x, y: img.y };
 
       const hitResult = this.state.findHitAnnotation(imagePoint);
-
+      
       if (hitResult) {
+        // **KEY FIX**: Always clear previous selection and editing first
+        this.clearSelectionAndEditing();
+        
+        // Then select the new annotation
         this.selectAnnotation(hitResult.id);
-        // Editing: only the clicked annotation should be editable
-        this.editManager.stopEditing();
         this.enableEditing(hitResult.id);
       } else {
-        // Clicked on empty space - clear selection
         this.clearSelectionAndEditing();
       }
     });

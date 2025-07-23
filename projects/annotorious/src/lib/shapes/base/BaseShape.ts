@@ -67,15 +67,23 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
   /**
    * Set selected state
+   * @param selected - whether the shape is selected
+   * @param styleManager - (optional) StyleManager instance for dynamic styling
+   * @param id - (optional) shape id for style lookup
    */
-  setSelected(selected: boolean): void {
+  setSelected(selected: boolean, styleManager?: any, id?: string): void {
     if (this.selected !== selected) {
       this.selected = selected;
-      this.shapeElement.classList.toggle('selected', selected);
-      if (selected) {
-        this.shapeElement.style.stroke = '#007bff';
-        this.shapeElement.style.strokeWidth = '3';
+      if (styleManager && id) {
+        const style = selected
+          ? styleManager.applySelectionStyle(id)
+          : styleManager.getStyle(id);
+        this.applyStyle(style);
+      } else {
+        // fallback to hardcoded values
+        this.shapeElement.style.strokeWidth = selected ? '3' : '2';
       }
+      this.shapeElement.classList.toggle('selected', selected);
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
     }
   }
@@ -116,7 +124,6 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Set default styles for the shape
    */
   protected setDefaultStyles(): void {
-    // this.shapeElement.setAttribute('fill', 'none'); // Removed fill
     this.shapeElement.setAttribute('stroke', '#000');
     this.shapeElement.setAttribute('stroke-width', '2');
     this.shapeElement.classList.add('annotation-shape');
@@ -182,6 +189,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
       if (style.strokeDasharray) {
         this.shapeElement.style.strokeDasharray = style.strokeDasharray;
       }
+
     }
   }
 
@@ -189,15 +197,21 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Enable editing mode for the shape
    */
   enableEditing(): void {
-    this.rootGroup.classList.add('editing');
+    this.shapeElement.classList.add('editing');
     this.showEditHandles();
+    this.handles.forEach(handle => {
+      handle.classList.add('editing');
+    });
   }
 
   /**
    * Disable editing mode for the shape
    */
   disableEditing(): void {
-    this.rootGroup.classList.remove('editing');
+    this.shapeElement.classList.remove('editing');
+    this.handles.forEach(handle => {
+      handle.classList.remove('editing');
+    });
     this.hideEditHandles();
   }
 
@@ -219,7 +233,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
    * Check if shape is in editing mode
    */
   isEditing(): boolean {
-    return this.rootGroup.classList.contains('editing');
+    return this.shapeElement.classList.contains('editing');
   }
 
   /**
@@ -255,3 +269,4 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     return this.containsPoint(point);
   }
 }
+
