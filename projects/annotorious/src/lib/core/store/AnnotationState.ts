@@ -1,203 +1,187 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Annotation } from '../../types/annotation.types';
 import { Shape } from '../../shapes/base';
-import { StyleManager } from '../managers/StyleManager';
-import { SpatialIndex, SpatialItem } from './SpatialIndex';
-import { HitDetection } from '../../utils/HitDetection';
+import { SpatialIndex } from './SpatialIndex';
+import { HitDetection, SVGUtils } from '../../utils';
 import { Point } from '../../types/shape.types';
-import { SVGUtils } from '../../utils';
-import { ShapeStyle } from '../managers/StyleManager';
-
-
 interface AnnotationStateEvents {
-  create: { groupId: string };
-  update: { groupId: string };
-  delete: { groupId: string };
-  select: { groupId: string };
-  deselect: { groupId: string };
+  create: { id: string };
+  update: { id: string };
+  delete: { id: string };
+  select: { id: string };
+  deselect: { id: string };
+  disableMouseNavigation: {};
+  enableMouseNavigation: {};
 }
 
 export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   private annotations: Map<string, Annotation>;
   private shapes: Map<string, Shape>;
-  private selectedIds: Set<string>;
-  private readonly styleManager: StyleManager;
+  private selectedId: string | null = null;
   private readonly spatialIndex: SpatialIndex;
 
-
-  constructor(styleManager: StyleManager) {
+  constructor() {
     super();
     this.annotations = new Map();
     this.shapes = new Map();
-    this.selectedIds = new Set();
-    this.styleManager = styleManager;
     this.spatialIndex = new SpatialIndex();
-
-    // Listen for style changes
-    this.styleManager.on('styleChanged', ({ id }) => {
-      const shape = this.shapes.get(id);
-      if (shape) {
-        const style = this.styleManager.getStyle(id);
-        shape.applyStyle(style);
-      }
-    });
   }
 
-  // Restore getAnnotationBBox for annotation geometry (image coordinates)
 
-
+  /**
+   * Add a new annotation with its associated shape
+   */
   add(annotation: Annotation, shape?: Shape): void {
     const id = annotation.id || crypto.randomUUID();
     annotation.id = id;
     this.annotations.set(id, annotation);
+
     if (shape) {
       this.shapes.set(id, shape);
       const bbox = SVGUtils.getAnnotationBBox(annotation);
       if (bbox) {
         this.spatialIndex.insert({ ...bbox, id });
       }
-      const style = this.styleManager.getMergedStyle(id, annotation.style);
-      this.styleManager.setAnnotationStyle(id, annotation.style || {});
-      shape.applyStyle(style);
     }
-    this.emit('create', { groupId: annotation.groupId });
+
+    this.emit('create', { id });
   }
 
+  /**
+   * Update an existing annotation
+   */
   update(id: string, changes: Partial<Annotation>): void {
     const current = this.annotations.get(id);
-    if(!current) return;
+    if (!current) return;
+
     const updated = { ...current, ...changes };
     this.annotations.set(id, updated);
+
+    // Update spatial index if geometry changed
     if (changes.target?.selector?.geometry) {
       const oldBbox = SVGUtils.getAnnotationBBox(current);
       const newBbox = SVGUtils.getAnnotationBBox(updated);
       if (oldBbox && newBbox) {
         this.spatialIndex.update({ ...oldBbox, id }, { ...newBbox, id });
       }
-    }
-    if (changes.target?.selector?.geometry) {
+
+      // Update shape geometry
       const shape = this.shapes.get(id);
       if (shape) {
         shape.update(changes.target.selector.geometry);
-        const style = this.styleManager.getStyle(id);
-        shape.applyStyle(style);
       }
     }
-    this.emit('update', { groupId: updated.groupId });
+
+    this.emit('update', { id });
   }
 
+  /**
+   * Remove an annotation and its associated shape and label
+   */
   remove(id: string): void {
     const annotation = this.annotations.get(id);
     if (!annotation) return;
-    const groupId = annotation.groupId;
-    const groupAnnotations = this.getGroupAnnotations(groupId);
-    groupAnnotations.forEach(a => {
-      this._removeSingle(a.id, false);
-    });
-    this.emit('delete', { groupId });
-  }
 
-  private _removeSingle(id: string, emit: boolean): void {
-    const annotation = this.annotations.get(id);
-    if (!annotation) return;
-    // Remove from spatial index using annotation geometry (image coordinates)
+    // Remove from spatial index
     const bbox = SVGUtils.getAnnotationBBox(annotation);
     if (bbox) {
       this.spatialIndex.remove({ ...bbox, id });
     }
-    this.annotations.delete(id);
+
+    // Clean up shape
     const shape = this.shapes.get(id);
     if (shape) {
       shape.destroy();
       this.shapes.delete(id);
     }
-    // Remove any custom style
-    this.styleManager.removeCustomStyle(id);
-    if (this.selectedIds.has(id)) {
-      this.selectedIds.delete(id);
+
+    // Clean up annotation
+    this.annotations.delete(id);
+
+    // Clean up selection
+    if (this.selectedId === id) {
+      this.selectedId = null;
     }
-    // No per-id delete event; only groupId events are emitted in remove()
+
+    this.emit('delete', { id });
   }
 
+  /**
+   * Select an annotation and start editing it
+   */
   select(id: string): void {
-    const annotation = this.annotations.get(id);
-    if (!annotation) return;
-    this.selectGroup(annotation.groupId);
-  }
-
-
-  /**
-   * Select all annotations in a group with proper style management
-   */
-  selectGroup(groupId: string): void {
-    // **KEY FIX**: Always deselect previous selections first
-    if (this.selectedIds.size > 0) {
-      const currentlySelected = Array.from(this.selectedIds);
-      const firstSelectedAnnotation = this.annotations.get(currentlySelected[0]);
-      
-      if (firstSelectedAnnotation && firstSelectedAnnotation.groupId !== groupId) {
-        this.deselectAll();
-      }
-    }
-
-    const groupAnnotations = this.getGroupAnnotations(groupId);
-    groupAnnotations.forEach(a => {
-      if (!this.selectedIds.has(a.id)) {
-        const shape = this.shapes.get(a.id);
-        if (shape) {
-          shape.setSelected(true, this.styleManager, a.id);
-        }
-        this.selectedIds.add(a.id);
-      }
-    });
-
-    this.emit('select', { groupId });
-  }
-
-  /**
-   * Deselect all with proper style restoration
-   */
-  deselectAll(): void {
-    if (this.selectedIds.size === 0) return;
-
-    const firstId = this.selectedIds.values().next().value ?? '';
-    const annotation = this.annotations.get(firstId);
-    if (!annotation) return;
+    this.deselectAll();
     
-    const groupId = annotation.groupId;
-
-    this.selectedIds.forEach(id => {
-      const shape = this.shapes.get(id);
-      if (shape) {
-        shape.setSelected(false, this.styleManager, id);
-      }
-    });
-
-    this.selectedIds.clear();
-    this.emit('deselect', { groupId });
+    const shape = this.shapes.get(id);
+    if (shape) {
+      this.selectedId = id;
+      this.emit('select', { id });
+    }
   }
 
+  deselectAll(): void {
+    if (this.selectedId === null) return;
+
+    this.emit('deselect', { id: this.selectedId });
+    this.selectedId = null;
+  }
+
+  
+  /**
+   * Get an annotation by ID
+   */
   getAnnotation(id: string): Annotation | undefined {
     return this.annotations.get(id);
   }
 
+  /**
+   * Get a shape by ID
+   */
   getShape(id: string): Shape | undefined {
     return this.shapes.get(id);
   }
 
+  /**
+   * Get all annotations
+   */
   getAll(): Annotation[] {
     return Array.from(this.annotations.values());
   }
 
+  /**
+   * Clear all annotations, shapes, and labels
+   */
   clear(): void {
     this.shapes.forEach(shape => shape.destroy());
+    
     this.annotations.clear();
     this.shapes.clear();
-    this.selectedIds.clear();
+    this.selectedId = null;
     this.spatialIndex.clear();
   }
 
   /**
+   * Check if an annotation is currently selected
+   */
+  isSelected(id: string): boolean {
+    return this.selectedId === id;
+  }
+
+  /**
+   * Get all selected annotation IDs
+   */
+  getSelectedId(): string | null {
+    return this.selectedId;
+  }
+
+  /**
+   * Check if any annotations are selected
+   */
+  hasSelections(): boolean {
+    return this.selectedId !== null;
+  }
+  
+ /**
    * Query annotations at a given point (SVG/image coordinates)
    */
   queryAtPoint(point: { x: number; y: number }, tolerance: number = 5): string[] {
@@ -241,17 +225,11 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return bestHit;
   }
 
-  getGroupIdForAnnotation(annotationId: string): string | undefined {
-    const annotation = this.annotations.get(annotationId);
-    return annotation?.groupId;
+  /**
+   * Destroy the annotation state and clean up resources
+   */
+  destroy(): void {
+    this.clear();
+    this.removeAllListeners();
   }
-
-
-  getGroupAnnotations(groupId: string): Annotation[] {
-    return Array.from(this.annotations.values())
-      .filter(a => a.groupId === groupId);
-  }
-
-
 }
-

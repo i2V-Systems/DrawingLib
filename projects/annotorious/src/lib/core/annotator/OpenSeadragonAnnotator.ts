@@ -74,12 +74,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Initialize managers
-    this.state = new AnnotationState(this.styleManager);
+    this.state = new AnnotationState();
     this.editManager = new EditManager(this.svg);
     this.toolManager = new ToolManager(this.svgOverlay);
 
-    this.editManager.on('editingDragStarted', () => this.viewer.setMouseNavEnabled(false));
-    this.editManager.on('editingDragStopped', () => this.viewer.setMouseNavEnabled(true));
     // Listen for geometry updates from EditManager
     this.editManager.on('updateGeometry', ({ id, geometry }) => {
       const annotation = this.state.getAnnotation(id);
@@ -106,11 +104,29 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     }
 
     // Bind manager events
-    this.state.on('create', this.onAnnotationCreated.bind(this));
-    this.state.on('update', this.onAnnotationUpdated.bind(this));
-    this.state.on('delete', this.onAnnotationDeleted.bind(this));
-    this.state.on('select', this.onAnnotationSelected.bind(this));
-    this.state.on('deselect', this.onAnnotationDeselected.bind(this));
+    this.state.on('create', (event: { id: string }) => {
+      const annotation = this.state.getAnnotation(event.id);
+      if (annotation) this.onAnnotationCreated(annotation);
+  });
+    this.state.on('update', (event: { id: string }) => {
+      const annotation = this.state.getAnnotation(event.id);
+      if (annotation) this.onAnnotationUpdated(annotation);
+    });
+    this.state.on('delete', (event: { id: string }) => {
+      const annotation = this.state.getAnnotation(event.id);
+      if (annotation) this.onAnnotationDeleted(annotation);
+    });
+    this.state.on('select', (event: { id: string }) => {
+      const annotation = this.state.getAnnotation(event.id);
+      if (annotation) this.onAnnotationSelected(annotation);
+    });
+    this.state.on('deselect', (event: { id: string }) => {
+      const annotation = this.state.getAnnotation(event.id);
+      if (annotation) this.onAnnotationDeselected(annotation);
+    });
+
+    this.editManager.on('editingDragStarted', () => this.viewer.setMouseNavEnabled(false));
+    this.editManager.on('editingDragStopped', () => this.viewer.setMouseNavEnabled(true));
 
 
     // Get image natural width and height
@@ -126,17 +142,15 @@ export class OpenSeadragonAnnotator extends EventEmitter {
           shape.getElement().parentNode.removeChild(shape.getElement());
         }
         const geometry = shape.getGeometry();
-        const groupId = crypto.randomUUID();
         const shapeAnnotation: Annotation = {
           id: crypto.randomUUID(),
           type: 'Annotation',
-          groupId,
           body: [],
           target: {
             source: config.imageUrl || '',
             selector: {
               type: 'SvgSelector',
-              geometry,
+              geometry
             }
           }
         };
@@ -145,6 +159,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         this.toolManager.deactivateActiveTool();
       }
     }, imageBounds);
+    
     tools.forEach(tool => this.toolManager.registerTool(tool));
 
 
@@ -187,12 +202,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       const hitResult = this.state.findHitAnnotation(imagePoint);
       
       if (hitResult) {
-        // **KEY FIX**: Always clear previous selection and editing first
         this.clearSelectionAndEditing();
-        
-        // Then select the new annotation
         this.selectAnnotation(hitResult.id);
-        this.enableEditing(hitResult.id);
       } else {
         this.clearSelectionAndEditing();
       }
@@ -241,6 +252,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       annotation.id || crypto.randomUUID(),
       convertToViewportCoordinates(annotation.target.selector.geometry, this.viewer.viewport)
     );
+    if (annotation.style) {
+      this.styleManager.setCustomStyle(annotation.id, annotation.style);
+    }
+    const style = this.styleManager.getStyle(annotation.id);
+    shape.applyStyle(style);
     this.state.add(annotation, shape);
     this.redrawAll();
   }
@@ -252,6 +268,14 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   updateAnnotation(id: string, update: Partial<Annotation>): void {
     this.state.update(id, update);
+    if (update.style) {
+      this.styleManager.setCustomStyle(id, update.style);
+    }
+    const shape = this.state.getShape(id);
+    if (shape) {
+      const style = this.styleManager.getStyle(id);
+      shape.applyStyle(style);
+    }
     this.redrawAll();
   }
 
@@ -260,8 +284,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   selectAnnotation(id: string): void {
-    const annotation = this.state.getAnnotation(id);
-    this.state.selectGroup(annotation?.groupId || '');
+    this.state.select(id);
   }
 
   clearSelectionAndEditing(): void {
@@ -269,12 +292,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state.deselectAll();
   }
 
-  enableEditing(id: string): void {
-    const shape = this.state.getShape(id);
-    if (shape) {
-      this.editManager.startEditing(id, shape);
-    }
-  }
+  
 
   disableEditing(id: string): void {
     this.editManager.stopEditing();
@@ -393,38 +411,45 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       overlayNode.removeChild(overlayNode.firstChild);
     }
 
-    // Add each annotation
     for (const annotation of annotations) {
-      // Convert geometry from image to SVG/viewport coordinates for rendering
-        const svgGeometry = convertToViewportCoordinates(annotation.target.selector.geometry, this.viewer.viewport);
-        const shape = ShapeFactory.createFromGeometry(annotation.id || crypto.randomUUID(), svgGeometry);
-        this.state.add(annotation, shape);
+      this.addAnnotation(annotation);
     }
-
-    // Redraw all shapes
     this.redrawAll();
   }
 
-  private onAnnotationCreated(evt: { groupId: string }): void {
-    this.emit('create', evt);
+  private onAnnotationCreated(annotation: Annotation): void {
+    this.emit('create', annotation);
   }
 
-  private onAnnotationUpdated(evt: { groupId: string }): void {
-    this.emit('update', evt);
+  private onAnnotationUpdated(annotation: Annotation): void {
+    this.emit('update', annotation);
+  }
+
+  private onAnnotationDeleted(annotation: Annotation): void {
+    this.emit('delete', annotation);
     this.redrawAll();
   }
 
-  private onAnnotationDeleted(evt: { groupId: string }): void {
-    this.emit('delete', evt);
-    this.redrawAll();
+  private onAnnotationSelected(annotation: Annotation): void {
+    const shape = this.state.getShape(annotation.id);
+    if (shape) {
+      const selectionStyle = this.styleManager.applySelectionStyle(annotation.id);
+      shape.applyStyle(selectionStyle);
+      shape.setSelected(true);
+      this.editManager.startEditing(annotation.id, shape);
+    }
+    this.emit('select', annotation);
   }
 
-  private onAnnotationSelected(evt: { groupId: string }): void {
-    this.emit('select', evt);
-  }
-
-  private onAnnotationDeselected(evt: { groupId: string }): void {
-    this.emit('deselect', evt);
+  private onAnnotationDeselected(annotation: Annotation): void {
+    const shape = this.state.getShape(annotation.id);
+    if (shape) {
+      const originalStyle = this.styleManager.restoreOriginalStyle(annotation.id);
+      shape.applyStyle(originalStyle);
+      shape.setSelected(false);
+    }
+    this.editManager.stopEditing();
+    this.emit('deselect', annotation);
   }
 
 }

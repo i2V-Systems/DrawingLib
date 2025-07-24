@@ -9,7 +9,7 @@ import demoAnnotations from '../../public/demo-annotations.json';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, AnnotoriousOpenseadragonModule],
+  imports: [AnnotoriousOpenseadragonModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -66,9 +66,6 @@ export class AppComponent {
     setTimeout(() => {
       if (this.annotoriousComp) {
         this.annotoriousComp.setAnnotations(demoAnnotations);
-        // for (const ann of demoAnnotations) {
-        //   this.annotoriousComp.addAnnotation(ann);
-        // }
       }
     }, 300);
   }

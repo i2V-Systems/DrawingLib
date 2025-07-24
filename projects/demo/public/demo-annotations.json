@@ -2,7 +2,6 @@
   {
     "id": "demo-rect-1",
     "type": "shape",
-    "groupId": "group-demo-1",
     "body": [
       {
         "type": "TextualBody",
@@ -28,7 +27,6 @@
   {
     "id": "demo-rect-2",
     "type": "shape",
-    "groupId": "group-demo-1",
     "body": [
       {
         "type": "TextualBody",
@@ -53,8 +51,7 @@
   },
   {
     "id": "demo-label-1",
-    "type": "label",
-    "groupId": "group-demo-1",
+    "type": "shape",
     "body": [
       {
         "type": "TextualBody",
@@ -85,7 +82,6 @@
   {
     "id": "demo-rect-4",
     "type": "shape",
-    "groupId": "group-demo-4",
     "body": [
       {
         "type": "TextualBody",

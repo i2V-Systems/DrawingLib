@@ -3,14 +3,14 @@ import { Geometry } from './shape.types';
 /**
  * Purpose of an annotation body
  */
-export type BodyPurpose = 
-  | 'commenting'   // Text comments
-  | 'tagging'      // Tags/labels
-  | 'classifying'  // Classification
-  | 'identifying'  // Unique identifiers
-  | 'linking'      // External links
-  | 'describing'   // Detailed descriptions
-  | 'bookmarking'; // Bookmarks/favorites
+export type BodyPurpose =
+  | 'commenting'    // Text comments
+  | 'tagging'       // Tags/labels
+  | 'classifying'   // Classification
+  | 'identifying'   // Unique identifiers
+  | 'linking'       // External links
+  | 'describing'    // Detailed descriptions
+  | 'bookmarking';  // Bookmarks/favorites
 
 /**
  * Base annotation body interface
@@ -92,17 +92,140 @@ export interface AnnotationTarget {
  */
 export interface Annotation {
   id: string;
-  type: string; // 'shape', 'label', 'group', etc.
-  groupId: string;
+  type: 'Annotation';  // Standardized to W3C annotation type
   body: AnnotationBody[];
   target: AnnotationTarget;
+  
+  // UI and styling properties
   style?: Record<string, any>;
+  
+  // Metadata
   customData?: Record<string, any>;
   created?: string;
   modified?: string;
+  creator?: {
+    id: string;
+    name?: string;
+  };
 }
 
+/**
+ * Annotation event interfaces
+ */
 export interface AnnotationEvent {
   annotation: Annotation;
   annotationId?: string;
-} 
+}
+
+export interface AnnotationCreateEvent extends AnnotationEvent {
+  type: 'create';
+}
+
+export interface AnnotationUpdateEvent extends AnnotationEvent {
+  type: 'update';
+  changes: Partial<Annotation>;
+}
+
+export interface AnnotationDeleteEvent {
+  type: 'delete';
+  annotationId: string;
+}
+
+export interface AnnotationSelectEvent {
+  type: 'select';
+  annotationId: string;
+}
+
+export interface AnnotationDeselectEvent {
+  type: 'deselect';
+  annotationId: string;
+}
+
+/**
+ * Union type for all annotation-related events
+ */
+export type AnnotationEventType = 
+  | AnnotationCreateEvent
+  | AnnotationUpdateEvent 
+  | AnnotationDeleteEvent
+  | AnnotationSelectEvent
+  | AnnotationDeselectEvent;
+
+
+/**
+ * Annotation collection interface for managing multiple annotations
+ */
+export interface AnnotationCollection {
+  annotations: Annotation[];
+  version?: string;
+  created?: string;
+  modified?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Annotation query result interface
+ */
+export interface AnnotationQueryResult {
+  annotations: Annotation[];
+  total: number;
+  offset?: number;
+  limit?: number;
+}
+
+/**
+ * Hit detection result interface
+ */
+export interface HitDetectionResult {
+  id: string;
+  distance: number;
+  type: 'annotation';
+  annotation?: Annotation;
+}
+
+/**
+ * Annotation state interface for persistence
+ */
+export interface AnnotationStateSnapshot {
+  annotations: Record<string, Annotation>;
+  selectedIds: string[];
+  editingId: string | null;
+  version: string;
+  timestamp: string;
+}
+
+/**
+ * Export utility functions for type validation
+ */
+export const AnnotationUtils = {
+  /**
+   * Validate if an object is a valid annotation
+   */
+  isValidAnnotation(obj: any): obj is Annotation {
+    return obj && 
+           typeof obj.id === 'string' &&
+           obj.type === 'Annotation' &&
+           Array.isArray(obj.body) &&
+           obj.target &&
+           obj.target.selector &&
+           obj.target.selector.geometry;
+  },
+
+  /**
+   * Create a minimal annotation structure
+   */
+  createMinimalAnnotation(id: string, geometry: Geometry): Annotation {
+    return {
+      id,
+      type: 'Annotation',
+      body: [],
+      target: {
+        selector: {
+          type: 'SvgSelector',
+          geometry
+        }
+      },
+      created: new Date().toISOString()
+    };
+  }
+};

@@ -20,6 +20,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   protected hovered: boolean;
   protected handles: SVGCircleElement[] = [];
   protected handlesGroup: SVGGElement;
+  protected currentStyle: ShapeStyle | null = null;
 
   constructor(id: string, shapeElement: SVGGraphicsElement) {
     super();
@@ -30,89 +31,54 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.selected = false;
     this.hovered = false;
 
-    // Set default styles
-    this.setDefaultStyles();
-
-    // Create a group for handles and append to the root group
+    // Create handles group
     this.handlesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     this.handlesGroup.setAttribute('class', 'a9s-handles-group');
     this.handlesGroup.style.display = 'none';
+
+    // Assemble the structure
     this.rootGroup.appendChild(this.shapeElement);
     this.rootGroup.appendChild(this.handlesGroup);
+
+    // Set initial class
+    this.shapeElement.classList.add('annotation-shape');
   }
 
-  /**
-   * Get the shape's ID
-   */
   getId(): string {
     return this.id;
   }
 
-  /**
-   * Get the shape's SVG element
-   */
   getElement(): SVGGElement {
     return this.rootGroup;
   }
 
-  /**
-   * Get the shape's geometry
-   */
   abstract getGeometry(): Geometry;
-
-  /**
-   * Update the shape's geometry
-   */
   abstract update(geometry: Geometry): void;
 
-  /**
-   * Set selected state
-   * @param selected - whether the shape is selected
-   * @param styleManager - (optional) StyleManager instance for dynamic styling
-   * @param id - (optional) shape id for style lookup
-   */
-  setSelected(selected: boolean, styleManager?: any, id?: string): void {
+  setSelected(selected: boolean): void {
     if (this.selected !== selected) {
       this.selected = selected;
-      if (styleManager && id) {
-        const style = selected
-          ? styleManager.applySelectionStyle(id)
-          : styleManager.getStyle(id);
-        this.applyStyle(style);
-      } else {
-        // fallback to hardcoded values
-        this.shapeElement.style.strokeWidth = selected ? '3' : '2';
-      }
       this.shapeElement.classList.toggle('selected', selected);
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
     }
   }
 
-  /**
-   * Set hovered state
-   */
   setHovered(hovered: boolean): void {
     if (this.hovered !== hovered) {
       this.hovered = hovered;
-      this.shapeElement.classList.toggle('hovered', hovered);
+      this.shapeElement.classList.toggle('hover', hovered);
       this.emit(hovered ? 'hover' : 'unhover', { id: this.id });
     }
   }
 
-  /**
-   * Check if point is inside shape
-   */
   containsPoint(point: Point): boolean {
     const bbox = this.getBBox();
-    return point.x >= bbox.x && 
-           point.x <= bbox.x + bbox.width && 
-           point.y >= bbox.y && 
+    return point.x >= bbox.x &&
+           point.x <= bbox.x + bbox.width &&
+           point.y >= bbox.y &&
            point.y <= bbox.y + bbox.height;
   }
 
-  /**
-   * Destroy the shape
-   */
   destroy(): void {
     if (this.rootGroup.parentNode) {
       this.rootGroup.parentNode.removeChild(this.rootGroup);
@@ -120,82 +86,60 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.removeAllListeners();
   }
 
-  /**
-   * Set default styles for the shape
-   */
-  protected setDefaultStyles(): void {
-    this.shapeElement.setAttribute('stroke', '#000');
-    this.shapeElement.setAttribute('stroke-width', '2');
-    this.shapeElement.classList.add('annotation-shape');
-  }
-
-  /**
-   * Get the shape's center point
-   */
   getCenter(): { x: number; y: number } {
     return SVGUtils.getCenter(this.shapeElement);
   }
 
-  /**
-   * Get the shape's bounding box
-   */
   getBBox(): { x: number; y: number; width: number; height: number } {
     return this.shapeElement.getBBox();
   }
 
-  /**
-   * Set the shape's visibility
-   */
   setVisible(visible: boolean): void {
     this.rootGroup.style.display = visible ? '' : 'none';
   }
 
-  /**
-   * Set the shape's opacity
-   */
   setOpacity(opacity: number): void {
     this.shapeElement.style.opacity = opacity.toString();
   }
 
-  /**
-   * Set the shape's stroke color
-   */
-  setStroke(color: string): void {
-    this.shapeElement.setAttribute('stroke', color);
-  }
-
-  /**
-   * Set the shape's stroke width
-   */
-  setStrokeWidth(width: number): void {
-    this.shapeElement.setAttribute('stroke-width', width.toString());
-  }
-
-  /**
-   * Set the shape's fill color
-   */
-  setFill(color: string): void {
-    this.shapeElement.setAttribute('fill', color);
-  }
-
-  /**
-   * Apply style to the shape
-   */
   applyStyle(style: ShapeStyle): void {
+    this.currentStyle = { ...style };
+    
     if (this.shapeElement) {
+      // Apply stroke properties
       this.shapeElement.style.stroke = style.stroke;
       this.shapeElement.style.strokeWidth = style.strokeWidth.toString();
       this.shapeElement.style.strokeOpacity = style.strokeOpacity.toString();
+      
+      // Apply fill properties
+      if (style.fill !== undefined) {
+        this.shapeElement.style.fill = style.fill;
+      }
+      if (style.fillOpacity !== undefined) {
+        this.shapeElement.style.fillOpacity = style.fillOpacity.toString();
+      }
+      
+      // Apply stroke dash array
       if (style.strokeDasharray) {
         this.shapeElement.style.strokeDasharray = style.strokeDasharray;
+      } else {
+        this.shapeElement.style.strokeDasharray = '';
       }
-
     }
+
+    // Apply handle styles
+    this.updateHandleStyles(style);
   }
 
-  /**
-   * Enable editing mode for the shape
-   */
+  protected updateHandleStyles(style: ShapeStyle): void {
+    this.handles.forEach(handle => {
+      handle.style.fill = style.handleFill;
+      handle.style.stroke = style.handleStroke;
+      handle.style.strokeWidth = style.handleStrokeWidth.toString();
+      handle.setAttribute('r', (style.handleSize / 2).toString());
+    });
+  }
+
   enableEditing(): void {
     this.shapeElement.classList.add('editing');
     this.showEditHandles();
@@ -204,9 +148,6 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     });
   }
 
-  /**
-   * Disable editing mode for the shape
-   */
   disableEditing(): void {
     this.shapeElement.classList.remove('editing');
     this.handles.forEach(handle => {
@@ -215,58 +156,36 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.hideEditHandles();
   }
 
-  /**
-   * Show edit handles (resize, move, etc.)
-   */
   protected showEditHandles(): void {
     this.handlesGroup.style.display = '';
   }
 
-  /**
-   * Hide edit handles
-   */
   protected hideEditHandles(): void {
     this.handlesGroup.style.display = 'none';
   }
 
-  /**
-   * Check if shape is in editing mode
-   */
   isEditing(): boolean {
     return this.shapeElement.classList.contains('editing');
   }
 
-  /**
-   * Move the shape by delta
-   */
   moveBy(deltaX: number, deltaY: number): void {
-    // Override in subclasses to implement specific move logic
+    // Override in subclasses
   }
 
-  /**
-   * Resize the shape
-   */
   resize(newWidth: number, newHeight: number): void {
-    // Override in subclasses to implement specific resize logic
+    // Override in subclasses
   }
 
-  /**
-   * Get edit handles for the shape
-   */
   getEditHandles(): { x: number; y: number; type: string }[] {
-    // Override in subclasses to return specific handles
+    // Override in subclasses
     return [];
   }
 
-
-
-  /**
-   * Determines if a point is on the circumference/edge of the shape.
-   * Subclasses can override for custom hit detection.
-   */
   protected isOnCircumference(point: { x: number; y: number }): boolean {
-    // Default: use containsPoint (with tolerance for edge)
     return this.containsPoint(point);
   }
-}
 
+  getCurrentStyle(): ShapeStyle | null {
+    return this.currentStyle ? { ...this.currentStyle } : null;
+  }
+}

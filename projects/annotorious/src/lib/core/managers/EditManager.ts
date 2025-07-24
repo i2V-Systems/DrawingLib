@@ -8,26 +8,18 @@ export interface EditHandle {
   onDrag: (newPos: Point) => void;
 }
 
-/**
- * Minimal EditManager: attaches/removes handles for a shape and manages drag events.
- */
 export class EditManager extends EventEmitter {
   private svg: SVGSVGElement;
   private editingShape: Shape | null = null;
-  private editingId: string | null = null;
+  private editingShapeId: string | null = null;
   private handleListeners: WeakMap<SVGElement, (e: PointerEvent) => void> = new WeakMap();
-
-  // Configurable selector for the main shape element
-  private shapeElementSelector: string = '.annotation-shape';
-
-  // Unified drag context
+  
   private dragContext: {
     type: 'handle' | 'shape' | null;
     element?: SVGElement;
     lastPointerPos?: Point;
   } = { type: null };
 
-  // Store listeners for cleanup
   private listeners: { [key: string]: (e: PointerEvent) => void } = {};
 
   constructor(svg: SVGSVGElement) {
@@ -36,57 +28,97 @@ export class EditManager extends EventEmitter {
   }
 
   startEditing(id: string, shape: Shape): void {
-    this.stopEditing(); // Clean up any previous editing
+    this.stopEditing();
+
     this.editingShape = shape;
-    this.editingId = id;
+    this.editingShapeId = id;
+    
     this.svg.addEventListener('pointermove', this.onPointerMove);
     this.svg.addEventListener('pointerup', this.onPointerUp);
-    this.shapeElementSelector = this.getShapeElementSelector(shape);
+
     shape.enableEditing();
 
-    // Add pointerdown to main shape element for dragging
-    const shapeElement = shape.getElement().querySelector(this.shapeElementSelector) as SVGElement;
-    if (shapeElement) {
-      this.listeners['shapePointerDown'] = (e: PointerEvent) => this.onShapePointerDown(e, shapeElement);
-      shapeElement.addEventListener('pointerdown', this.listeners['shapePointerDown']);
-    }
+    this.setupShapeDragging(shape);
 
+    this.setupHandleDragging(shape);
+
+    this.emit('editingStarted', { id });
+  }
+
+  private setupShapeDragging(shape: Shape): void {
+    const targetElement = shape.getElement().querySelector('.annotation-shape') as SVGElement;
+
+    if (targetElement) {
+      this.listeners['shapePointerDown'] = (e: PointerEvent) => 
+        this.onShapePointerDown(e, targetElement);
+      targetElement.addEventListener('pointerdown', this.listeners['shapePointerDown']);
+      
+      targetElement.style.cursor = 'move';
+    }
+  }
+
+  private setupHandleDragging(shape: Shape): void {
     shape.getEditHandles().forEach(handle => {
       const el = (handle as any).element;
-      const handler = (e: PointerEvent) => this.onHandlePointerDown(e, el);
-      this.handleListeners.set(el, handler);
-      el.addEventListener('pointerdown', handler);
+      if (el) {
+        const handler = (e: PointerEvent) => this.onHandlePointerDown(e, el);
+        this.handleListeners.set(el, handler);
+        el.addEventListener('pointerdown', handler);
+        el.style.cursor = 'pointer';
+      }
     });
   }
 
   stopEditing(): void {
-    if (this.editingShape && this.editingId) {
-      // Emit updateGeometry event with the latest geometry
-      const geometry = this.editingShape.getGeometry();
-      this.emit('updateGeometry', { id: this.editingId, geometry });
-    }
     if (this.editingShape) {
-      // Remove shape pointerdown handler
-      const shapeElement = this.editingShape.getElement().querySelector(this.shapeElementSelector) as SVGElement;
-      if (shapeElement && this.listeners['shapePointerDown']) {
-        shapeElement.removeEventListener('pointerdown', this.listeners['shapePointerDown']);
+      const geometry = this.editingShape.getGeometry();
+      this.emit('updateGeometry', { 
+        id: this.editingShapeId, 
+        geometry,
+        type: 'shape'
+      });
+
+      this.editingShape.disableEditing();
+
+      const targetElement = this.editingShape.getElement().querySelector('.annotation-shape') as SVGElement;
+
+      if (targetElement && this.listeners['shapePointerDown']) {
+        targetElement.removeEventListener('pointerdown', this.listeners['shapePointerDown']);
+        targetElement.style.cursor = '';
         delete this.listeners['shapePointerDown'];
       }
+
       this.editingShape.getEditHandles().forEach(handle => {
         const el = (handle as any).element;
         const handler = this.handleListeners.get(el);
         if (handler) {
           el.removeEventListener('pointerdown', handler);
+          el.style.cursor = '';
           this.handleListeners.delete(el);
         }
       });
-      this.editingShape.disableEditing();
-      this.editingShape = null;
+
+      this.emit('editingStopped', { 
+        id: this.editingShapeId,
+        type: 'shape'
+      });
     }
-    this.editingId = null;
+
+    this.editingShape = null;
+    this.editingShapeId = null;
     this.svg.removeEventListener('pointermove', this.onPointerMove);
     this.svg.removeEventListener('pointerup', this.onPointerUp);
     this.dragContext = { type: null };
+  }
+
+  private onShapePointerDown(event: PointerEvent, element: SVGElement): void {
+    event.stopPropagation();
+    this.dragContext = {
+      type: 'shape',
+      element,
+      lastPointerPos: this.getSVGPoint(event)
+    };
+    this.emit('editingDragStarted', { type: 'shape' });
   }
 
   private onHandlePointerDown(event: PointerEvent, handleElement: SVGElement): void {
@@ -96,39 +128,42 @@ export class EditManager extends EventEmitter {
       element: handleElement,
       lastPointerPos: this.getSVGPoint(event)
     };
-    this.emit('editingDragStarted', {});
-  }
-
-  private onShapePointerDown(event: PointerEvent, shapeElement: SVGElement): void {
-    event.stopPropagation();
-    this.dragContext = {
-      type: 'shape',
-      element: shapeElement,
-      lastPointerPos: this.getSVGPoint(event)
-    };
-    this.emit('editingDragStarted', {});
+    this.emit('editingDragStarted', { type: 'handle' });
   }
 
   private onPointerMove = (event: PointerEvent) => {
-    if (!this.editingShape || !this.dragContext.type) return;
-    const pt = this.getSVGPoint(event);
-    if (this.dragContext.type === 'shape' && this.dragContext.lastPointerPos) {
-      const dx = pt.x - this.dragContext.lastPointerPos.x;
-      const dy = pt.y - this.dragContext.lastPointerPos.y;
-      (this.editingShape as any).moveBy(dx, dy);
-      this.dragContext.lastPointerPos = pt;
-      return;
-    }
-    if (this.dragContext.type === 'handle' && this.dragContext.element) {
-      // Clamp to SVG bounds
-      const clamped = this.clampToSVG(pt);
-      (this.editingShape as any).updateFromHandle(this.dragContext.element, clamped);
+    if (!this.editingShape || !this.dragContext.type || !this.dragContext.lastPointerPos) return;
+
+    const currentPos = this.getSVGPoint(event);
+    const deltaX = currentPos.x - this.dragContext.lastPointerPos.x;
+    const deltaY = currentPos.y - this.dragContext.lastPointerPos.y;
+
+    if (this.dragContext.type === 'shape') {
+      this.editingShape.moveBy(deltaX, deltaY);
+      this.dragContext.lastPointerPos = currentPos;
+      this.emit('entityDragged', { 
+        id: this.editingShapeId, 
+        type: 'shape',
+        delta: { x: deltaX, y: deltaY }
+      });
+    } else if (this.dragContext.type === 'handle' && this.dragContext.element) {
+      const clampedPos = this.clampToSVG(currentPos);
+      (this.editingShape as any).updateFromHandle(this.dragContext.element, clampedPos);
+      this.emit('handleDragged', { 
+        id: this.editingShapeId,
+        handleElement: this.dragContext.element,
+        position: clampedPos
+      });
     }
   };
 
-  private onPointerUp = (_event: PointerEvent) => {
+  private onPointerUp = (event: PointerEvent) => {
+    if (this.dragContext.type) {
+      this.emit('editingDragStopped', { 
+        type: this.dragContext.type
+      });
+    }
     this.dragContext = { type: null };
-    this.emit('editingDragStopped', {});
   };
 
   private getSVGPoint(event: PointerEvent): Point {
@@ -144,9 +179,6 @@ export class EditManager extends EventEmitter {
     return { x: pt.x, y: pt.y };
   }
 
-  /**
-   * Clamp a point to the SVG's bounding box
-   */
   private clampToSVG(point: Point): Point {
     const rect = this.svg.getBoundingClientRect();
     return {
@@ -155,11 +187,18 @@ export class EditManager extends EventEmitter {
     };
   }
 
-  private getShapeElementSelector(shape: Shape): string {
-    const geometry = shape.getGeometry();
-    if (geometry.type === 'text') {
-      return 'text'; // Target the text element directly, not .annotation-shape
-    }
-    return '.annotation-shape';
+  getCurrentEditingEntity(): { id: string; type: 'shape' } | null {
+    return this.editingShape && this.editingShapeId ? {
+      id: this.editingShapeId,
+      type: 'shape'
+    } : null;
   }
-} 
+
+  isEditing(): boolean {
+    return this.editingShape !== null;
+  }
+
+  isEditingEntity(id: string): boolean {
+    return this.editingShapeId === id;
+  }
+}

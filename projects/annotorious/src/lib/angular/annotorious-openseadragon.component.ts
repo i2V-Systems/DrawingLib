@@ -17,7 +17,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   @Input() showNavigationControl: boolean = false;
   @Input() showToolbar: boolean = false;
   @Input() imageSource: any = { type: 'image', url: 'https://images.pexels.com/photos/32920370/pexels-photo-32920370.jpeg' };
-  @Input() theme: Theme = darkTheme;
+  @Input() theme: Theme = lightTheme;
   @Input() defaultTool: 'rectangle' | 'polygon' | 'circle' | 'ellipse' | 'freehand' | 'text' = 'rectangle';
 
   @Output() annotationCreated = new EventEmitter<AnnotationEvent>();

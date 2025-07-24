@@ -14,7 +14,7 @@ export interface Shape {
   /**
    * Set selected state
    */
-  setSelected(selected: boolean): void;
+  setSelected(selected: boolean, styleManager?: any, id?: string): void;
 
   /**
    * Set hovered state
@@ -75,6 +75,11 @@ export interface Shape {
    * Get edit handles for the shape
    */
   getEditHandles(): { x: number; y: number; type: string }[];
+
+  /**
+   * Get the bounding box of the shape
+   */
+  getBBox(): { x: number; y: number; width: number; height: number };
 
   /**
    * Add event listener
