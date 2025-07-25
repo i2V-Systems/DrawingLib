@@ -48,7 +48,7 @@
 
 .crosshair line {
   stroke: rgba(0, 0, 0, 0.5);
-  stroke-width: 1;
+  stroke-width: 3;
   vector-effect: non-scaling-stroke;
 }
 

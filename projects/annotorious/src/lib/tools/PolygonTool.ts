@@ -126,10 +126,6 @@ export class PolygonTool extends Tool {
       // Clamp all points to image bounds before finalizing
       this.points = this.points.map(p => (this.constructor as typeof Tool).clampToImageBounds(p, this.imageBounds));
       const points = [...this.points];
-      if (!this.isNearPoint(points[points.length - 1], points[0])) {
-        // Close the polygon if not already closed
-        points.push(points[0]);
-      }
       this.currentShape.update({ type: 'polygon', points });
 
       // Get the final shape element

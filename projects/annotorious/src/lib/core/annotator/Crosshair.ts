@@ -25,7 +25,7 @@ export class Crosshair extends EventEmitter {
       enabled: true,
       showOnlyWhenDrawing: true,
       color: 'rgba(0, 0, 0, 0.5)',
-      strokeWidth: 1,
+      strokeWidth: 3,
       opacity: 0.5,
       ...config
     };

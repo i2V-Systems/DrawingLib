@@ -70,15 +70,6 @@ export class FreehandTool extends Tool {
     if (this.isCurrentlyDrawing) {
       this.isCurrentlyDrawing = false;
       
-      // Add final point if it's different from the last one
-      const lastPoint = this.points[this.points.length - 1];
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
-      const distance = Math.sqrt((clamped.x - lastPoint.x) ** 2 + (clamped.y - lastPoint.y) ** 2);
-      
-      if (distance > 2) {
-        this.points.push(clamped);
-      }
-      
       // Only complete if we have enough points
       if (this.points.length >= 3) {
         // Create polygon shape from points

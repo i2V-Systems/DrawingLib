@@ -42,6 +42,15 @@ export class RectangleTool extends Tool {
         'rectangle'
       ) as RectangleShape;
       
+      // Initialize with 0 size at the start point
+      this.currentShape.update({ 
+        type: 'rectangle', 
+        x: this.startPoint.x, 
+        y: this.startPoint.y, 
+        width: 0, 
+        height: 0 
+      });
+
       // Add to SVG
       this.svg.appendChild(this.currentShape.getElement());
     }

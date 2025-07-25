@@ -11,7 +11,7 @@ export class CircleTool extends Tool {
   
   private svg: SVGSVGElement;
   private currentShape: CircleShape | null = null;
-  private center: Point | null = null;
+  private startPoint: Point | null = null;
   private onComplete: (shape: CircleShape) => void;
   private minRadius = 2;
   private imageBounds: { naturalWidth: number, naturalHeight: number };
@@ -35,39 +35,34 @@ export class CircleTool extends Tool {
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
-      this.center = clamped;
-      
-      // Create initial shape
-      this.currentShape = ShapeFactory.createDefault(
-        crypto.randomUUID(),
-        'circle'
-      ) as CircleShape;
-      
-      // Add to SVG
-      this.svg.appendChild(this.currentShape.getElement());
+      if (!this.currentShape) {
+        this.startDrawing(clamped);
+      }
     }
   }
 
   override handleMouseMove(point: Point, _event: PointerEvent): void {
-    if (this.center && this.currentShape) {
+    if (this.startPoint && this.currentShape) {
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
-      // Calculate radius
-      const radius = this.calculateRadius(this.center, clamped);
+      const radius = this.calculateRadius(this.startPoint, clamped) / 2;
+      const center = {
+        x: this.startPoint.x + (clamped.x - this.startPoint.x) / 2,
+        y: this.startPoint.y + (clamped.y - this.startPoint.y) / 2
+      };
       
-      // Update shape
       this.currentShape.update({
         type: 'circle',
-        cx: this.center.x,
-        cy: this.center.y,
+        cx: center.x,
+        cy: center.y,
         r: radius
       });
     }
   }
 
   override handleMouseUp(point: Point, _event: PointerEvent): void {
-    if (this.center && this.currentShape) {
+    if (this.startPoint && this.currentShape) {
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
-      const radius = this.calculateRadius(this.center, clamped);
+      const radius = this.calculateRadius(this.startPoint, clamped) / 2;
       
       // Only complete if the circle has some size
       if (radius > this.minRadius) {
@@ -76,14 +71,27 @@ export class CircleTool extends Tool {
         this.cleanup();
       }
       
-      this.center = null;
+      this.startPoint = null;
       this.currentShape = null;
     }
   }
 
-  private calculateRadius(center: Point, point: Point): number {
-    const dx = point.x - center.x;
-    const dy = point.y - center.y;
+  private startDrawing(point: Point): void {
+    this.startPoint = point;
+    
+    // Create initial shape
+    this.currentShape = ShapeFactory.createDefault(
+      crypto.randomUUID(),
+      'circle'
+    ) as CircleShape;
+    
+    // Add to SVG
+    this.svg.appendChild(this.currentShape.getElement());
+  }
+
+  private calculateRadius(p1: Point, p2: Point): number {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
 
@@ -92,7 +100,7 @@ export class CircleTool extends Tool {
       this.currentShape.destroy();
       this.currentShape = null;
     }
-    this.center = null;
+    this.startPoint = null;
   }
 
 }

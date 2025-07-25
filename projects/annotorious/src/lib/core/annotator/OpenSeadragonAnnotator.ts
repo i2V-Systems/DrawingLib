@@ -357,6 +357,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   activateTool(name: string): void {
+    this.clearSelectionAndEditing();
     this.toolManager.activateTool(name);
   }
 
