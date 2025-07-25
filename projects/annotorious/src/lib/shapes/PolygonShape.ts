@@ -18,7 +18,8 @@ export class PolygonShape extends BaseShape {
     this.points = geometry.points;
     const points = this.points.map(p => `${p.x},${p.y}`).join(' ');
     this.shapeElement.setAttribute('points', points);
-
+    this.updateHandlePositions();
+    this.updateOutline();
   }
 
   getGeometry(): Geometry {
@@ -83,6 +84,13 @@ export class PolygonShape extends BaseShape {
       type: 'vertex',
       element: handle
     }));
+  }
+
+  override updateOutline(): void {
+    if (this.selectionOutline) {
+      const points = this.points.map(p => `${p.x},${p.y}`).join(' ');
+      this.selectionOutline.setAttribute('points', points);
+    }
   }
 
   public override containsPoint(point: { x: number; y: number }): boolean {

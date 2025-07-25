@@ -21,10 +21,10 @@
         }
       }
     },
-    "style": { "stroke": "red", "strokeWidth": 5 },
+    "style": { "stroke": "red", "strokeWidth": 10 },
     "customData": { "note": "Grouped shape 1" }
   },
-  {
+    {
     "id": "demo-rect-2",
     "type": "shape",
     "body": [
@@ -104,4 +104,5 @@
     "style": { "stroke": "green", "strokeWidth": 2 },
     "customData": { "note": "Grouped shape 1" }
   }
+
 ] 

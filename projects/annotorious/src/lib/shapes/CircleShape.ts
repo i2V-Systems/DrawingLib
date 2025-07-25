@@ -35,6 +35,8 @@ export class CircleShape extends BaseShape {
     this.shapeElement.setAttribute('cx', cx.toString());
     this.shapeElement.setAttribute('cy', cy.toString());
     this.shapeElement.setAttribute('r', r.toString());
+
+    this.updateOutline();
   }
 
   public override getEditHandles(): { x: number; y: number; type: string; element: SVGCircleElement }[] {

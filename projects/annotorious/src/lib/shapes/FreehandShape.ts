@@ -63,7 +63,14 @@ export class FreehandShape extends BaseShape {
     };
   }
 
-  override containsPoint(point: { x: number; y: number }): boolean {
+  override updateOutline(): void {
+    if (this.selectionOutline) {
+      const points = this.geometry.points.map(p => `${p.x},${p.y}`).join(' ');
+      this.selectionOutline.setAttribute('points', points);
+    }
+  }
+
+  public override containsPoint(point: { x: number; y: number }): boolean {
     const tol = 5;
     if (!this.geometry.points || this.geometry.points.length < 2) return false;
     for (let i = 0; i < this.geometry.points.length - 1; i++) {

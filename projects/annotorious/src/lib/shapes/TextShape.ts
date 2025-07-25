@@ -23,10 +23,6 @@ export class TextShape extends BaseShape {
   }
 
   override update(geometry: Geometry): void {
-    if (geometry.type !== 'text') {
-      throw new Error('Invalid geometry type for TextShape');
-    }
-
     const { x, y, text } = geometry as TextGeometry;
     this.x = x;
     this.y = y;
@@ -36,6 +32,15 @@ export class TextShape extends BaseShape {
     this.text.textContent = text;
     this.text.setAttribute('x', x.toString());
     this.text.setAttribute('y', y.toString());
+    this.updateOutline();
+  }
+
+  override updateOutline(): void {
+    if (this.selectionOutline) {
+      this.selectionOutline.setAttribute('x', this.x.toString());
+      this.selectionOutline.setAttribute('y', this.y.toString());
+      this.selectionOutline.textContent = this.content;
+    }
   }
 
   override getGeometry(): Geometry {

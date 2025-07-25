@@ -20,6 +20,8 @@ export interface ShapeStyle {
   // Selection
   selectedStroke: string;
   selectedStrokeWidth: number;
+  selectionOutlineColor: string;
+  selectionOutlineWidth: number;
   
   // Hover
   hoverFill: string;
@@ -51,6 +53,8 @@ export const lightTheme: Theme = {
     handleStrokeWidth: 1,
     selectedStroke: '#4a90e2',
     selectedStrokeWidth: 3,
+    selectionOutlineColor: '#4a90e2',
+    selectionOutlineWidth: 2,
     hoverFill: '#ffffff',
     hoverStroke: '#4a90e2',
     hoverStrokeWidth: 2,
@@ -68,6 +72,7 @@ export const darkTheme: Theme = {
     handleFill: '#000000',
     handleStroke: '#ffffff',
     selectedStroke: '#4a90e2',
+    selectionOutlineColor: '#4a90e2',
     hoverFill: '#000000',
     hoverStroke: '#4a90e2'
   }
@@ -142,8 +147,8 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
     this.storeOriginalStyle(id, currentStyle);
     
     return this.getMergedStyle(id, {
-      stroke: this.currentTheme.shapes.selectedStroke,
-      strokeWidth: this.currentTheme.shapes.selectedStrokeWidth + 1
+      stroke: this.currentTheme.shapes.selectionOutlineColor,
+      strokeWidth: currentStyle.strokeWidth + this.currentTheme.shapes.selectionOutlineWidth
     });
   }
 
@@ -167,9 +172,8 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
         vector-effect: non-scaling-stroke;
       }
       
-      .annotation-shape.selected {
-        stroke: ${shapes.selectedStroke};
-        stroke-width: ${shapes.selectedStrokeWidth};
+      .selection-outline {
+        vector-effect: non-scaling-stroke;
       }
       
       .annotation-shape.hover {

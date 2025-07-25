@@ -148,6 +148,10 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     return Array.from(this.annotations.values());
   }
 
+  getShapes(): Shape[] {
+    return Array.from(this.shapes.values());
+  }
+
   /**
    * Clear all annotations, shapes, and labels
    */

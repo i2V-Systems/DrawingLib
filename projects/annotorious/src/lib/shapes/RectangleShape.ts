@@ -31,6 +31,7 @@ export class RectangleShape extends BaseShape {
     this.shapeElement.setAttribute('width', width.toString());
     this.shapeElement.setAttribute('height', height.toString());
 
+    this.updateOutline();
     this.updateHandlePositions();
   }
 
@@ -75,16 +76,12 @@ export class RectangleShape extends BaseShape {
     const nx = Math.min(x1, x2), ny = Math.min(y1, y2);
     const nw = Math.abs(x2 - x1), nh = Math.abs(y2 - y1);
     this.update({ type: 'rectangle', x: nx, y: ny, width: nw, height: nh });
-    this.updateHandlePositions();
   }
 
   public override moveBy(deltaX: number, deltaY: number): void {
     this.x += deltaX;
     this.y += deltaY;
     this.update({ type: 'rectangle', x: this.x, y: this.y, width: this.width, height: this.height });
-    if (this.handles && this.handles.length > 0) {
-      this.updateHandlePositions();
-    }
   }
 
   protected override showEditHandles(): void {

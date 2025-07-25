@@ -75,7 +75,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     // Initialize managers
     this.state = new AnnotationState();
-    this.editManager = new EditManager(this.svg);
+    this.editManager = new EditManager(this.svgOverlay);
     this.toolManager = new ToolManager(this.svgOverlay);
 
     // Listen for geometry updates from EditManager
@@ -433,8 +433,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private onAnnotationSelected(annotation: Annotation): void {
     const shape = this.state.getShape(annotation.id);
     if (shape) {
-      const selectionStyle = this.styleManager.applySelectionStyle(annotation.id);
-      shape.applyStyle(selectionStyle);
       shape.setSelected(true);
       this.editManager.startEditing(annotation.id, shape);
     }
@@ -444,8 +442,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private onAnnotationDeselected(annotation: Annotation): void {
     const shape = this.state.getShape(annotation.id);
     if (shape) {
-      const originalStyle = this.styleManager.restoreOriginalStyle(annotation.id);
-      shape.applyStyle(originalStyle);
       shape.setSelected(false);
     }
     this.editManager.stopEditing();

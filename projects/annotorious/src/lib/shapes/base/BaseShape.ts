@@ -16,6 +16,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   protected readonly id: string;
   protected readonly rootGroup: SVGGElement;
   protected readonly shapeElement: SVGGraphicsElement;
+  protected readonly selectionOutline: SVGGraphicsElement;
   protected selected: boolean;
   protected hovered: boolean;
   protected handles: SVGCircleElement[] = [];
@@ -31,12 +32,18 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.selected = false;
     this.hovered = false;
 
+    // Create a persistent selection outline from a shallow clone
+    this.selectionOutline = this.shapeElement.cloneNode(false) as SVGGraphicsElement;
+    this.selectionOutline.classList.add('selection-outline');
+    this.selectionOutline.style.display = 'none';
+
     // Create handles group
     this.handlesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     this.handlesGroup.setAttribute('class', 'a9s-handles-group');
     this.handlesGroup.style.display = 'none';
 
     // Assemble the structure
+    this.rootGroup.appendChild(this.selectionOutline);
     this.rootGroup.appendChild(this.shapeElement);
     this.rootGroup.appendChild(this.handlesGroup);
 
@@ -58,7 +65,18 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   setSelected(selected: boolean): void {
     if (this.selected !== selected) {
       this.selected = selected;
-      this.shapeElement.classList.toggle('selected', selected);
+      if (selected) {
+        this.selectionOutline.style.display = '';
+        if (this.currentStyle) {
+          this.selectionOutline.style.stroke = this.currentStyle.selectionOutlineColor;
+          this.selectionOutline.style.strokeWidth = (this.currentStyle.strokeWidth + 3).toString();
+        }
+        this.updateOutline();
+        this.showEditHandles();
+      } else {
+        this.selectionOutline.style.display = 'none';
+        this.hideEditHandles();
+      }
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
     }
   }
@@ -127,15 +145,22 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
       }
     }
 
+    // Apply selection outline styles
+    if (this.selectionOutline) {
+        this.selectionOutline.style.stroke = style.selectionOutlineColor;
+        this.selectionOutline.style.strokeWidth = (style.strokeWidth + 3).toString();
+    }
+
     // Apply handle styles
     this.updateHandleStyles(style);
   }
 
-  protected updateHandleStyles(style: ShapeStyle): void {
+  updateHandleStyles(style: ShapeStyle): void {
+    this.currentStyle = { ...style };
     this.handles.forEach(handle => {
       handle.style.fill = style.handleFill;
-      handle.style.stroke = style.handleStroke;
-      handle.style.strokeWidth = style.handleStrokeWidth.toString();
+      handle.style.stroke = '#000000';
+      handle.style.strokeWidth = (style.strokeWidth / 2).toString();
       handle.setAttribute('r', (style.handleSize / 2).toString());
     });
   }
@@ -143,16 +168,10 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   enableEditing(): void {
     this.shapeElement.classList.add('editing');
     this.showEditHandles();
-    this.handles.forEach(handle => {
-      handle.classList.add('editing');
-    });
   }
 
   disableEditing(): void {
     this.shapeElement.classList.remove('editing');
-    this.handles.forEach(handle => {
-      handle.classList.remove('editing');
-    });
     this.hideEditHandles();
   }
 
@@ -187,5 +206,16 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
   getCurrentStyle(): ShapeStyle | null {
     return this.currentStyle ? { ...this.currentStyle } : null;
+  }
+
+  updateOutline(): void {
+    if (this.selectionOutline) {
+      const geometry = this.getGeometry();
+      for (const key in geometry) {
+        if (key !== 'type') {
+          this.selectionOutline.setAttribute(key, geometry[key as keyof Geometry]);
+        }
+      }
+    }
   }
 }

@@ -1,6 +1,8 @@
 import { Shape } from '../../shapes/base';
 import { Point, Geometry } from '../../types/shape.types';
+import { SvgOverlay } from '../annotator';
 import { EventEmitter } from '../events/EventEmitter';
+import OpenSeadragon from 'openseadragon';
 
 export interface EditHandle {
   element: SVGElement;
@@ -9,7 +11,7 @@ export interface EditHandle {
 }
 
 export class EditManager extends EventEmitter {
-  private svg: SVGSVGElement;
+  private overlay: SvgOverlay;
   private editingShape: Shape | null = null;
   private editingShapeId: string | null = null;
   private handleListeners: WeakMap<SVGElement, (e: PointerEvent) => void> = new WeakMap();
@@ -22,9 +24,9 @@ export class EditManager extends EventEmitter {
 
   private listeners: { [key: string]: (e: PointerEvent) => void } = {};
 
-  constructor(svg: SVGSVGElement) {
+  constructor(overlay: SvgOverlay) {
     super();
-    this.svg = svg;
+    this.overlay = overlay;
   }
 
   startEditing(id: string, shape: Shape): void {
@@ -33,8 +35,8 @@ export class EditManager extends EventEmitter {
     this.editingShape = shape;
     this.editingShapeId = id;
     
-    this.svg.addEventListener('pointermove', this.onPointerMove);
-    this.svg.addEventListener('pointerup', this.onPointerUp);
+    this.overlay.svg().addEventListener('pointermove', this.onPointerMove);
+    this.overlay.svg().addEventListener('pointerup', this.onPointerUp);
 
     shape.enableEditing();
 
@@ -53,7 +55,7 @@ export class EditManager extends EventEmitter {
         this.onShapePointerDown(e, targetElement);
       targetElement.addEventListener('pointerdown', this.listeners['shapePointerDown']);
       
-      targetElement.style.cursor = 'move';
+      // targetElement.style.cursor = 'move';
     }
   }
 
@@ -106,8 +108,8 @@ export class EditManager extends EventEmitter {
 
     this.editingShape = null;
     this.editingShapeId = null;
-    this.svg.removeEventListener('pointermove', this.onPointerMove);
-    this.svg.removeEventListener('pointerup', this.onPointerUp);
+    this.overlay.svg().removeEventListener('pointermove', this.onPointerMove);
+    this.overlay.svg().removeEventListener('pointerup', this.onPointerUp);
     this.dragContext = { type: null };
   }
 
@@ -167,23 +169,14 @@ export class EditManager extends EventEmitter {
   };
 
   private getSVGPoint(event: PointerEvent): Point {
-    const svg = this.svg;
-    const pt = svg.createSVGPoint();
-    pt.x = event.clientX;
-    pt.y = event.clientY;
-    const ctm = svg.getScreenCTM();
-    if (ctm) {
-      const transformed = pt.matrixTransform(ctm.inverse());
-      return { x: transformed.x, y: transformed.y };
-    }
-    return { x: pt.x, y: pt.y };
+    return this.overlay.eventToImage(event);
   }
 
   private clampToSVG(point: Point): Point {
-    const rect = this.svg.getBoundingClientRect();
+    const imageBounds = this.overlay.getImageDimensions();
     return {
-      x: Math.max(0, Math.min(point.x, rect.width)),
-      y: Math.max(0, Math.min(point.y, rect.height))
+      x: Math.max(0, Math.min(point.x, imageBounds.width)),
+      y: Math.max(0, Math.min(point.y, imageBounds.height))
     };
   }
 
