@@ -1,4 +1,4 @@
-import { Geometry } from './shape.types';
+import { Geometry, TextGeometry } from './shape.types';
 
 /**
  * Purpose of an annotation body
@@ -95,6 +95,7 @@ export interface Annotation {
   type: 'Annotation';  // Standardized to W3C annotation type
   body: AnnotationBody[];
   target: AnnotationTarget;
+  label?: TextGeometry;
   
   // UI and styling properties
   style?: Record<string, any>;

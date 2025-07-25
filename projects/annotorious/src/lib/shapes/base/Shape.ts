@@ -1,4 +1,4 @@
-import { Geometry } from '../../types/shape.types';
+import { Geometry, TextGeometry } from '../../types/shape.types';
 import { Point } from '../../types/shape.types';
 import { ShapeStyle } from '../../core/managers/StyleManager';
 
@@ -40,6 +40,8 @@ export interface Shape {
    * Update the shape's geometry
    */
   update(geometry: Geometry): void;
+
+  updateLabel(label: TextGeometry): void;
 
   /**
    * Apply style to the shape

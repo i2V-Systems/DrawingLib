@@ -42,6 +42,20 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
       if (bbox) {
         this.spatialIndex.insert({ ...bbox, id });
       }
+      if (annotation.label) {
+        if (!annotation.label.x || !annotation.label.y) {
+          const shapeBbox = SVGUtils.getAnnotationBBox(annotation);
+          if (shapeBbox) {
+            annotation.label.x = shapeBbox.minX + (shapeBbox.maxX - shapeBbox.minX) / 2;
+            annotation.label.y = shapeBbox.minY - 10; // 10px above the bbox
+          }
+        }
+        const labelBbox = SVGUtils.getAnnotationBBox({ target: { selector: { geometry: annotation.label } } } as Annotation);
+        if (labelBbox) {
+          this.spatialIndex.insert({ ...labelBbox, id: `label-${id}` });
+        }
+        shape.updateLabel(annotation.label);
+      }
     }
 
     this.emit('create', { id });
@@ -71,6 +85,19 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
         shape.update(changes.target.selector.geometry);
       }
     }
+    if (changes.label) {
+      const oldLabelBbox = current.label ? SVGUtils.getAnnotationBBox({ target: { selector: { geometry: current.label } } } as Annotation) : null;
+      const newLabelBbox = SVGUtils.getAnnotationBBox({ target: { selector: { geometry: changes.label } } } as Annotation);
+      if (oldLabelBbox && newLabelBbox) {
+        this.spatialIndex.update({ ...oldLabelBbox, id: `label-${id}` }, { ...newLabelBbox, id: `label-${id}` });
+      } else if (newLabelBbox) {
+        this.spatialIndex.insert({ ...newLabelBbox, id: `label-${id}` });
+      }
+      const shape = this.shapes.get(id);
+      if (shape) {
+        shape.updateLabel(changes.label);
+      }
+    }
 
     this.emit('update', { id });
   }
@@ -86,6 +113,12 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     const bbox = SVGUtils.getAnnotationBBox(annotation);
     if (bbox) {
       this.spatialIndex.remove({ ...bbox, id });
+    }
+    if (annotation.label) {
+      const labelBbox = SVGUtils.getAnnotationBBox({ target: { selector: { geometry: annotation.label } } } as Annotation);
+      if (labelBbox) {
+        this.spatialIndex.remove({ ...labelBbox, id: `label-${id}` });
+      }
     }
 
     // Clean up shape
@@ -196,7 +229,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
       maxY: point.y + tolerance
     };
     const hits = this.spatialIndex.search(searchBox);
-    return hits.map(item => item.id);
+    return hits.map(item => item.id.startsWith('label-') ? item.id.substring(6) : item.id);
   }
 
   /**
@@ -215,12 +248,23 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     // Test each candidate with precise hit detection
     for (const id of candidateIds) {
       const annotation = this.annotations.get(id);
-      if (!annotation || !annotation.target?.selector?.geometry) {
+      if (!annotation) {
         continue;
       }
 
-      const hitResult = HitDetection.hitTest(point, annotation.target.selector.geometry, tolerance);
-      if (hitResult.hit && hitResult.distance < minDistance) {
+      let hitResult = null;
+      if (annotation.target?.selector?.geometry) {
+        hitResult = HitDetection.hitTest(point, annotation.target.selector.geometry, tolerance);
+      }
+
+      if (annotation.label) {
+        const labelHitResult = HitDetection.hitTest(point, annotation.label, tolerance);
+        if (labelHitResult.hit && (!hitResult || !hitResult.hit || labelHitResult.distance < hitResult.distance)) {
+          hitResult = labelHitResult;
+        }
+      }
+
+      if (hitResult && hitResult.hit && hitResult.distance < minDistance) {
         minDistance = hitResult.distance;
         bestHit = { id, distance: hitResult.distance };
       }

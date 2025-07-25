@@ -21,87 +21,15 @@
         }
       }
     },
-    "style": { "stroke": "red", "strokeWidth": 10 },
-    "customData": { "note": "Grouped shape 1" }
-  },
-    {
-    "id": "demo-rect-2",
-    "type": "shape",
-    "body": [
-      {
-        "type": "TextualBody",
-        "purpose": "tagging",
-        "value": "Rectangle 2"
-      }
-    ],
-    "target": {
-      "selector": {
-        "type": "SvgSelector",
-        "geometry": {
-          "type": "rectangle",
-          "x": 850,
-          "y": 400,
-          "width": 200,
-          "height": 150
-        }
-      }
-    },
-    "style": { "stroke": "blue", "strokeWidth": 2 },
-    "customData": { "note": "Grouped shape 2" }
-  },
-  {
-    "id": "demo-label-1",
-    "type": "shape",
-    "body": [
-      {
-        "type": "TextualBody",
-        "purpose": "tagging",
-        "value": "Group Label"
-      }
-    ],
-    "target": {
-      "selector": {
-        "type": "SvgSelector",
-        "geometry": {
+    "label":{
           "type": "text",
           "x": 650,
           "y": 370,
-          "text": "Group Label Group Label Group Label",
+          "text": "Rectangle Label",
           "fontSize": 16,
           "fontFamily": "Arial"
-        }
-      },
-      "style": { 
-        "fill": "red", 
-        "fontSize": 16,
-        "fontWeight": "bold"
-      },
-      "customData": { "note": "Text-only label without background" }
-    }
-  },
-  {
-    "id": "demo-rect-4",
-    "type": "shape",
-    "body": [
-      {
-        "type": "TextualBody",
-        "purpose": "tagging",
-        "value": "Rectangle 1"
-      }
-    ],
-    "target": {
-      "selector": {
-        "type": "SvgSelector",
-        "geometry": {
-          "type": "rectangle",
-          "x": 800,
-          "y": 100,
-          "width": 300,
-          "height": 200
-        }
-      }
     },
-    "style": { "stroke": "green", "strokeWidth": 2 },
+    "style": { "stroke": "red", "strokeWidth": 10 },
     "customData": { "note": "Grouped shape 1" }
   }
 

@@ -12,6 +12,7 @@ import { createTools } from '../../tools';
 import { SvgOverlay, SvgOverlayInfo } from './SvgOverlay';
 import { EditManager } from '../managers/EditManager';
 import { convertToViewportCoordinates } from '../../utils/SVGUtils';
+import { TextGeometry } from '../../types';
 
 
 export interface OpenSeadragonAnnotatorConfig {
@@ -79,18 +80,22 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.toolManager = new ToolManager(this.svgOverlay);
 
     // Listen for geometry updates from EditManager
-    this.editManager.on('updateGeometry', ({ id, geometry }) => {
+    this.editManager.on('updateGeometry', ({ id, geometry, type }) => {
       const annotation = this.state.getAnnotation(id);
       if (annotation) {
-        this.updateAnnotation(id, {
-          target: {
-            ...annotation.target,
-            selector: {
-              ...annotation.target.selector,
-              geometry
+        if (type === 'label') {
+          this.updateAnnotation(id, { label: geometry as TextGeometry });
+        } else {
+          this.updateAnnotation(id, {
+            target: {
+              ...annotation.target,
+              selector: {
+                ...annotation.target.selector,
+                geometry
+              }
             }
-          }
-        });
+          });
+        }
       }
     });
 

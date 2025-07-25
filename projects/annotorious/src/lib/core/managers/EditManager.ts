@@ -17,7 +17,7 @@ export class EditManager extends EventEmitter {
   private handleListeners: WeakMap<SVGElement, (e: PointerEvent) => void> = new WeakMap();
   
   private dragContext: {
-    type: 'handle' | 'shape' | null;
+    type: 'handle' | 'shape' | 'label' | null;
     element?: SVGElement;
     lastPointerPos?: Point;
   } = { type: null };
@@ -43,6 +43,8 @@ export class EditManager extends EventEmitter {
     this.setupShapeDragging(shape);
 
     this.setupHandleDragging(shape);
+
+    this.setupLabelDragging(shape);
 
     this.emit('editingStarted', { id });
   }
@@ -71,6 +73,16 @@ export class EditManager extends EventEmitter {
     });
   }
 
+  private setupLabelDragging(shape: Shape): void {
+    const labelElement = (shape as any).labelElement as SVGElement;
+    if (labelElement) {
+      this.listeners['labelPointerDown'] = (e: PointerEvent) =>
+        this.onLabelPointerDown(e, labelElement);
+      labelElement.addEventListener('pointerdown', this.listeners['labelPointerDown']);
+      labelElement.style.cursor = 'move';
+    }
+  }
+
   stopEditing(): void {
     if (this.editingShape) {
       const geometry = this.editingShape.getGeometry();
@@ -88,6 +100,12 @@ export class EditManager extends EventEmitter {
         targetElement.removeEventListener('pointerdown', this.listeners['shapePointerDown']);
         targetElement.style.cursor = '';
         delete this.listeners['shapePointerDown'];
+      }
+
+      const labelElement = (this.editingShape as any).labelElement as SVGElement;
+      if (labelElement && this.listeners['labelPointerDown']) {
+        labelElement.removeEventListener('pointerdown', this.listeners['labelPointerDown']);
+        delete this.listeners['labelPointerDown'];
       }
 
       this.editingShape.getEditHandles().forEach(handle => {
@@ -123,6 +141,16 @@ export class EditManager extends EventEmitter {
     this.emit('editingDragStarted', { type: 'shape' });
   }
 
+  private onLabelPointerDown(event: PointerEvent, element: SVGElement): void {
+    event.stopPropagation();
+    this.dragContext = {
+      type: 'label',
+      element,
+      lastPointerPos: this.getSVGPoint(event)
+    };
+    this.emit('editingDragStarted', { type: 'label' });
+  }
+
   private onHandlePointerDown(event: PointerEvent, handleElement: SVGElement): void {
     event.stopPropagation();
     this.dragContext = {
@@ -148,6 +176,15 @@ export class EditManager extends EventEmitter {
         type: 'shape',
         delta: { x: deltaX, y: deltaY }
       });
+    } else if (this.dragContext.type === 'label') {
+      const newPosition = { x: currentPos.x, y: currentPos.y };
+      (this.editingShape as any).updateLabel({ text: (this.editingShape as any).labelElement.textContent, ...newPosition });
+      this.dragContext.lastPointerPos = currentPos;
+      this.emit('entityDragged', {
+        id: this.editingShapeId,
+        type: 'label',
+        delta: { x: deltaX, y: deltaY }
+      });
     } else if (this.dragContext.type === 'handle' && this.dragContext.element) {
       const clampedPos = this.clampToSVG(currentPos);
       (this.editingShape as any).updateFromHandle(this.dragContext.element, clampedPos);
@@ -161,6 +198,19 @@ export class EditManager extends EventEmitter {
 
   private onPointerUp = (event: PointerEvent) => {
     if (this.dragContext.type) {
+      if (this.dragContext.type === 'label' && this.editingShape) {
+        const labelGeometry = {
+          x: parseFloat((this.editingShape as any).labelElement.getAttribute('x')),
+          y: parseFloat((this.editingShape as any).labelElement.getAttribute('y')),
+          text: (this.editingShape as any).labelElement.textContent,
+          type: 'text'
+        };
+        this.emit('updateGeometry', {
+          id: this.editingShapeId,
+          geometry: labelGeometry,
+          type: 'label'
+        });
+      }
       this.emit('editingDragStopped', { 
         type: this.dragContext.type
       });

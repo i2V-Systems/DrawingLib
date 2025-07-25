@@ -91,6 +91,9 @@
   cursor: pointer;
 }
 
+.annotation-label:hover{
+  cursor : move
+}
 .annotation-text {
   font-size: 16px;
   font-family: Arial, sans-serif;

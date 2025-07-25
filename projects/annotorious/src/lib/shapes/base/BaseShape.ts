@@ -1,6 +1,6 @@
 import { EventEmitter } from '../../core/events/EventEmitter';
 import { ShapeStyle } from '../../core/managers/StyleManager';
-import { Geometry, Point } from '../../types/shape.types';
+import { Geometry, Point, TextGeometry } from '../../types/shape.types';
 import { SVGUtils } from '../../utils/SVGUtils';
 import { Shape } from './Shape';
 
@@ -16,6 +16,8 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   protected readonly id: string;
   protected readonly rootGroup: SVGGElement;
   protected readonly shapeElement: SVGGraphicsElement;
+  protected readonly labelElement: SVGTextElement;
+  protected readonly labelBbox: SVGRectElement;
   protected readonly selectionOutline: SVGGraphicsElement;
   protected selected: boolean;
   protected hovered: boolean;
@@ -36,6 +38,7 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     this.selectionOutline = this.shapeElement.cloneNode(false) as SVGGraphicsElement;
     this.selectionOutline.classList.add('selection-outline');
     this.selectionOutline.style.display = 'none';
+    this.selectionOutline.style.fill = 'none';
 
     // Create handles group
     this.handlesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -45,6 +48,13 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     // Assemble the structure
     this.rootGroup.appendChild(this.selectionOutline);
     this.rootGroup.appendChild(this.shapeElement);
+    this.labelElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    this.labelElement.setAttribute('class', 'annotation-label');
+    this.labelElement.setAttribute('text-anchor', 'middle');
+    this.rootGroup.appendChild(this.labelElement);
+    this.labelBbox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    this.labelBbox.setAttribute('class', 'a9s-label-bbox');
+    this.rootGroup.insertBefore(this.labelBbox, this.labelElement);
     this.rootGroup.appendChild(this.handlesGroup);
 
     // Set initial class
@@ -61,6 +71,30 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
   abstract getGeometry(): Geometry;
   abstract update(geometry: Geometry): void;
+
+  updateLabel(label: TextGeometry): void {
+    this.labelElement.setAttribute('x', label.x.toString());
+    this.labelElement.setAttribute('y', label.y.toString());
+    this.labelElement.textContent = label.text;
+    if (label.style) {
+      for (const key in label.style) {
+        const value = label.style[key as keyof typeof label.style];
+        if (value !== undefined) {
+          this.labelElement.style[key as any] = String(value);
+        }
+      }
+    }
+
+    // Defer bbox calculation to allow for rendering
+    setTimeout(() => {
+      const padding = 5;
+      const bbox = this.labelElement.getBBox();
+      this.labelBbox.setAttribute('x', (bbox.x - padding).toString());
+      this.labelBbox.setAttribute('y', (bbox.y - padding).toString());
+      this.labelBbox.setAttribute('width', (bbox.width + 2 * padding).toString());
+      this.labelBbox.setAttribute('height', (bbox.height + 2 * padding).toString());
+    }, 0);
+  }
 
   setSelected(selected: boolean): void {
     if (this.selected !== selected) {
@@ -153,6 +187,12 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
     // Apply handle styles
     this.updateHandleStyles(style);
+
+    // Apply label styles
+    this.labelBbox.setAttribute('fill', style.stroke || 'black');
+    this.labelBbox.setAttribute('rx', '2');
+    this.labelBbox.setAttribute('ry', '2');
+    this.labelElement.style.fill = 'white';
   }
 
   updateHandleStyles(style: ShapeStyle): void {
