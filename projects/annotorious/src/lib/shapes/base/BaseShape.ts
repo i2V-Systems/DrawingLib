@@ -12,7 +12,10 @@ interface ShapeEvents {
   geometryChanged: { geometry: Geometry };
 }
 
-export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Shape {
+export abstract class BaseShape
+  extends EventEmitter<ShapeEvents>
+  implements Shape
+{
   protected readonly id: string;
   protected readonly rootGroup: SVGGElement;
   protected readonly shapeElement: SVGGraphicsElement;
@@ -29,32 +32,49 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
     super();
     this.id = id;
     this.shapeElement = shapeElement;
-    this.rootGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.rootGroup = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'g'
+    );
     this.rootGroup.setAttribute('class', 'a9s-shape-group');
     this.selected = false;
     this.hovered = false;
 
     // Create a persistent selection outline from a shallow clone
-    this.selectionOutline = this.shapeElement.cloneNode(false) as SVGGraphicsElement;
+    this.selectionOutline = this.shapeElement.cloneNode(
+      false
+    ) as SVGGraphicsElement;
     this.selectionOutline.classList.add('selection-outline');
     this.selectionOutline.style.display = 'none';
     this.selectionOutline.style.fill = 'none';
 
     // Create handles group
-    this.handlesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.handlesGroup = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'g'
+    );
     this.handlesGroup.setAttribute('class', 'a9s-handles-group');
     this.handlesGroup.style.display = 'none';
 
     // Assemble the structure
     this.rootGroup.appendChild(this.selectionOutline);
     this.rootGroup.appendChild(this.shapeElement);
-    this.labelElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    this.labelElement = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'text'
+    );
     this.labelElement.setAttribute('class', 'annotation-label');
     this.labelElement.setAttribute('text-anchor', 'middle');
     this.rootGroup.appendChild(this.labelElement);
-    this.labelBbox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
+    this.labelBbox = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'rect'
+    );
     this.labelBbox.setAttribute('class', 'a9s-label-bbox');
     this.rootGroup.insertBefore(this.labelBbox, this.labelElement);
+
     this.rootGroup.appendChild(this.handlesGroup);
 
     // Set initial class
@@ -72,10 +92,12 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
   abstract getGeometry(): Geometry;
   abstract update(geometry: Geometry): void;
 
+  // Simplified updateLabel method
   updateLabel(label: TextGeometry): void {
     this.labelElement.setAttribute('x', label.x.toString());
     this.labelElement.setAttribute('y', label.y.toString());
     this.labelElement.textContent = label.text;
+
     if (label.style) {
       for (const key in label.style) {
         const value = label.style[key as keyof typeof label.style];
@@ -85,14 +107,20 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
       }
     }
 
-    // Defer bbox calculation to allow for rendering
+    // Update bbox
     setTimeout(() => {
       const padding = 5;
       const bbox = this.labelElement.getBBox();
       this.labelBbox.setAttribute('x', (bbox.x - padding).toString());
       this.labelBbox.setAttribute('y', (bbox.y - padding).toString());
-      this.labelBbox.setAttribute('width', (bbox.width + 2 * padding).toString());
-      this.labelBbox.setAttribute('height', (bbox.height + 2 * padding).toString());
+      this.labelBbox.setAttribute(
+        'width',
+        (bbox.width + 2 * padding).toString()
+      );
+      this.labelBbox.setAttribute(
+        'height',
+        (bbox.height + 2 * padding).toString()
+      );
     }, 0);
   }
 
@@ -102,8 +130,11 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
       if (selected) {
         this.selectionOutline.style.display = '';
         if (this.currentStyle) {
-          this.selectionOutline.style.stroke = this.currentStyle.selectionOutlineColor;
-          this.selectionOutline.style.strokeWidth = (this.currentStyle.strokeWidth + 3).toString();
+          this.selectionOutline.style.stroke =
+            this.currentStyle.selectionOutlineColor;
+          this.selectionOutline.style.strokeWidth = (
+            this.currentStyle.strokeWidth + 3
+          ).toString();
         }
         this.updateOutline();
         this.showEditHandles();
@@ -125,10 +156,12 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
   containsPoint(point: Point): boolean {
     const bbox = this.getBBox();
-    return point.x >= bbox.x &&
-           point.x <= bbox.x + bbox.width &&
-           point.y >= bbox.y &&
-           point.y <= bbox.y + bbox.height;
+    return (
+      point.x >= bbox.x &&
+      point.x <= bbox.x + bbox.width &&
+      point.y >= bbox.y &&
+      point.y <= bbox.y + bbox.height
+    );
   }
 
   destroy(): void {
@@ -156,53 +189,77 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
 
   applyStyle(style: ShapeStyle): void {
     this.currentStyle = { ...style };
-    
+
+    // Apply shape-specific styles
+    this.applyShapeStyles(style);
+
+    // Apply selection outline with fixed relationship
+    this.applySelectionStyles(style);
+
+    // Apply handle styles with fixed properties
+    this.applyHandleStyles(style);
+
+    // Apply label styles with fixed relationships
+    this.applyLabelStyles(style);
+  }
+
+  private applyShapeStyles(style: ShapeStyle): void {
     if (this.shapeElement) {
-      // Apply stroke properties
       this.shapeElement.style.stroke = style.stroke;
       this.shapeElement.style.strokeWidth = style.strokeWidth.toString();
       this.shapeElement.style.strokeOpacity = style.strokeOpacity.toString();
-      
-      // Apply fill properties
+
       if (style.fill !== undefined) {
         this.shapeElement.style.fill = style.fill;
       }
+
       if (style.fillOpacity !== undefined) {
         this.shapeElement.style.fillOpacity = style.fillOpacity.toString();
       }
-      
-      // Apply stroke dash array
+
       if (style.strokeDasharray) {
         this.shapeElement.style.strokeDasharray = style.strokeDasharray;
       } else {
         this.shapeElement.style.strokeDasharray = '';
       }
     }
-
-    // Apply selection outline styles
-    if (this.selectionOutline) {
-        this.selectionOutline.style.stroke = style.selectionOutlineColor;
-        this.selectionOutline.style.strokeWidth = (style.strokeWidth + 3).toString();
-    }
-
-    // Apply handle styles
-    this.updateHandleStyles(style);
-
-    // Apply label styles
-    this.labelBbox.setAttribute('fill', style.stroke || 'black');
-    this.labelBbox.setAttribute('rx', '2');
-    this.labelBbox.setAttribute('ry', '2');
-    this.labelElement.style.fill = 'white';
   }
 
-  updateHandleStyles(style: ShapeStyle): void {
-    this.currentStyle = { ...style };
-    this.handles.forEach(handle => {
+  private applySelectionStyles(style: ShapeStyle): void {
+    if (this.selectionOutline) {
+      // Fixed outline color and computed width relationship
+      this.selectionOutline.style.stroke = style.selectionOutlineColor;
+      this.selectionOutline.style.strokeWidth =
+        style.selectionOutlineWidth.toString();
+    }
+  }
+
+  private applyHandleStyles(style: ShapeStyle): void {
+    this.handles.forEach((handle) => {
+      // Fixed handle colors
       handle.style.fill = style.handleFill;
-      handle.style.stroke = '#000000';
-      handle.style.strokeWidth = (style.strokeWidth / 2).toString();
+      handle.style.stroke = style.handleStroke;
+
+      // Computed handle size based on strokeWidth and zoom
       handle.setAttribute('r', (style.handleSize / 2).toString());
     });
+  }
+
+  private applyLabelStyles(style: ShapeStyle): void {
+    if (this.labelElement.textContent) {
+      // Fixed label text color
+      this.labelElement.style.fill = style.labelTextFill;
+      this.labelElement.style.fontSize = `${style.fontSize || 14}px`;
+      this.labelElement.style.fontFamily =
+        style.fontFamily || 'Arial, sans-serif';
+      this.labelElement.style.fontWeight = style.fontWeight || 'normal';
+      this.labelElement.style.fontStyle = style.fontStyle || 'normal';
+
+      // Label background fill = shape stroke color
+      this.labelBbox.style.fill = style.stroke;
+      this.labelBbox.setAttribute('rx', '2');
+      this.labelBbox.setAttribute('ry', '2');
+    }
   }
 
   enableEditing(): void {
@@ -253,7 +310,10 @@ export abstract class BaseShape extends EventEmitter<ShapeEvents> implements Sha
       const geometry = this.getGeometry();
       for (const key in geometry) {
         if (key !== 'type') {
-          this.selectionOutline.setAttribute(key, geometry[key as keyof Geometry]);
+          this.selectionOutline.setAttribute(
+            key,
+            geometry[key as keyof Geometry]
+          );
         }
       }
     }

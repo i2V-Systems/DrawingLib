@@ -1,39 +1,30 @@
 import { EventEmitter } from '../events/EventEmitter';
 
 export interface ShapeStyle {
-  // Stroke
+  // Primary style properties (user-configurable)
   stroke: string;
   strokeWidth: number;
   strokeDasharray?: string;
   strokeOpacity: number;
-  
-  // Fill
   fill?: string;
   fillOpacity?: number;
-  
-  // Handles
-  handleFill: string;
-  handleStroke: string;
-  handleSize: number;
-  handleStrokeWidth: number;
-  
-  // Selection
-  selectedStroke: string;
-  selectedStrokeWidth: number;
-  selectionOutlineColor: string;
-  selectionOutlineWidth: number;
-  
-  // Hover
-  hoverFill: string;
-  hoverStroke: string;
-  hoverStrokeWidth: number;
-  
-  // Text-specific
+
+  // Base handle size (will be computed based on strokeWidth)
+  baseHandleSize: number;
+  handleSize: number; // Computed based on strokeWidth and zoom
+  // Text properties
   fontFamily?: string;
   fontSize?: number;
   fontWeight?: string;
   fontStyle?: string;
   textDecoration?: string;
+
+  // Fixed computed properties (not directly settable)
+  readonly selectionOutlineColor: string;
+  readonly selectionOutlineWidth: number;
+  readonly handleFill: string;
+  readonly handleStroke: string;
+  readonly labelTextFill: string;
 }
 
 export interface Theme {
@@ -47,22 +38,19 @@ export const lightTheme: Theme = {
     strokeOpacity: 1,
     fill: 'transparent',
     fillOpacity: 0.1,
-    handleFill: '#ffffff',
-    handleStroke: '#000000',
-    handleSize: 8,
-    handleStrokeWidth: 1,
-    selectedStroke: '#4a90e2',
-    selectedStrokeWidth: 3,
-    selectionOutlineColor: '#4a90e2',
-    selectionOutlineWidth: 2,
-    hoverFill: '#ffffff',
-    hoverStroke: '#4a90e2',
-    hoverStrokeWidth: 2,
+    baseHandleSize: 6, // Base size, will be computed with strokeWidth
     fontFamily: 'Arial, sans-serif',
     fontSize: 14,
     fontWeight: 'normal',
-    fontStyle: 'normal'
-  }
+    fontStyle: 'normal',
+    handleSize: 6, // Will be computed based on strokeWidth
+    // Computed properties (readonly)
+    selectionOutlineColor: '#4a90e2', // Fixed
+    selectionOutlineWidth: 4, // Will be computed as strokeWidth + 2
+    handleFill: '#ffffff', // Fixed
+    handleStroke: '#000000', // Fixed
+    labelTextFill: 'white', // Fixed
+  },
 };
 
 export const darkTheme: Theme = {
@@ -71,11 +59,8 @@ export const darkTheme: Theme = {
     stroke: '#ffffff',
     handleFill: '#000000',
     handleStroke: '#ffffff',
-    selectedStroke: '#4a90e2',
     selectionOutlineColor: '#4a90e2',
-    hoverFill: '#000000',
-    hoverStroke: '#4a90e2'
-  }
+  },
 };
 
 interface StyleManagerEvents {
@@ -88,6 +73,14 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
   private currentTheme: Theme;
   private customStyles: Map<string, Partial<ShapeStyle>>;
   private originalStyles: Map<string, ShapeStyle>;
+  private currentZoom: number = 1;
+
+  // Fixed style constants
+  private readonly FIXED_OUTLINE_COLOR = '#4a90e2';
+  private readonly FIXED_OUTLINE_WIDTH_OFFSET = 2;
+  private readonly FIXED_HANDLE_FILL = '#000000';
+  private readonly FIXED_HANDLE_STROKE = '#000000';
+  private readonly FIXED_LABEL_TEXT_FILL = 'white';
 
   constructor(theme: Theme = lightTheme) {
     super();
@@ -105,6 +98,15 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
     return { ...this.currentTheme };
   }
 
+  setCurrentZoom(zoom: number): void {
+    this.currentZoom = zoom;
+    // this.emit('zoomChanged', { zoom });
+  }
+
+  getCurrentZoom(): number {
+    return this.currentZoom;
+  }
+
   setCustomStyle(id: string, style: Partial<ShapeStyle>): void {
     this.customStyles.set(id, { ...style });
     this.emit('styleChanged', { id, style });
@@ -117,95 +119,104 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
 
   getStyle(id: string): ShapeStyle {
     const customStyle = this.customStyles.get(id);
-    return customStyle
+    const baseStyle = customStyle
       ? { ...this.currentTheme.shapes, ...customStyle }
       : { ...this.currentTheme.shapes };
+
+    // Apply zoom-independent scaling
+    const scaleFactor = 1 / this.currentZoom;
+
+    // Compute handle size based on strokeWidth and zoom
+    const computedHandleSize = this.computeHandleSize(
+      baseStyle.strokeWidth,
+      scaleFactor
+    );
+
+    return {
+      ...baseStyle,
+      // Fixed computed properties
+      selectionOutlineColor: this.FIXED_OUTLINE_COLOR,
+      selectionOutlineWidth:
+        baseStyle.strokeWidth + this.FIXED_OUTLINE_WIDTH_OFFSET,
+      handleFill: this.FIXED_HANDLE_FILL,
+      handleStroke: this.FIXED_HANDLE_STROKE,
+      labelTextFill: this.FIXED_LABEL_TEXT_FILL,
+
+      // Zoom-adjusted properties
+      handleSize: computedHandleSize,
+      fontSize: baseStyle.fontSize
+    };
   }
 
-  getMergedStyle(id: string, partial?: Partial<ShapeStyle>): ShapeStyle {
-    const base = this.getStyle(id);
-    return { ...base, ...partial };
+  private computeHandleSize(strokeWidth: number, scaleFactor: number): number {
+    // Handle size relationship: base size + strokeWidth factor, adjusted for zoom
+    const baseSize = 6; // Base handle radius
+    const strokeFactor = strokeWidth * 0.5; // Handle grows with stroke width
+    return (baseSize + strokeFactor) * scaleFactor;
   }
 
-  storeOriginalStyle(id: string, style: ShapeStyle): void {
-    if (!this.originalStyles.has(id)) {
-      this.originalStyles.set(id, { ...style });
-    }
-  }
-
-  restoreOriginalStyle(id: string): ShapeStyle {
-    const original = this.originalStyles.get(id);
-    if (original) {
-      this.originalStyles.delete(id);
-      return { ...original };
-    }
-    return this.getStyle(id);
-  }
-
-  applySelectionStyle(id: string): ShapeStyle {
-    const currentStyle = this.getStyle(id);
-    this.storeOriginalStyle(id, currentStyle);
-    
-    return this.getMergedStyle(id, {
-      stroke: this.currentTheme.shapes.selectionOutlineColor,
-      strokeWidth: currentStyle.strokeWidth + this.currentTheme.shapes.selectionOutlineWidth
-    });
-  }
-
-  applyHoverStyle(id: string): ShapeStyle {
-    return this.getMergedStyle(id, {
-      fill: this.currentTheme.shapes.hoverFill,
-      stroke: this.currentTheme.shapes.hoverStroke,
-      strokeWidth: this.currentTheme.shapes.hoverStrokeWidth
-    });
-  }
-
+  // Create styles with proper computed relationships
   createSVGStyles(): string {
     const { shapes } = this.currentTheme;
     return `
-      .annotation-shape {
-        stroke: ${shapes.stroke};
-        stroke-width: ${shapes.strokeWidth};
-        stroke-opacity: ${shapes.strokeOpacity};
-        fill: ${shapes.fill || 'transparent'};
-        fill-opacity: ${shapes.fillOpacity || 0};
-        vector-effect: non-scaling-stroke;
-      }
-      
-      .selection-outline {
-        vector-effect: non-scaling-stroke;
-      }
-      
-      .annotation-shape.hover {
-        fill: ${shapes.hoverFill};
-        stroke: ${shapes.hoverStroke};
-        stroke-width: ${shapes.hoverStrokeWidth};
-      }
-      
-      .annotation-handle {
-        fill: ${shapes.handleFill};
-        stroke: ${shapes.handleStroke};
-        stroke-width: ${shapes.handleStrokeWidth};
-        r: ${shapes.handleSize / 2}px;
-        vector-effect: non-scaling-stroke;
-        cursor: pointer;
-      }
-      
-      .annotation-handle:hover {
-        fill: ${shapes.hoverFill};
-        stroke: ${shapes.hoverStroke};
-      }
-      
-      .annotation-text {
-        font-family: ${shapes.fontFamily || 'Arial, sans-serif'};
-        font-size: ${shapes.fontSize || 14}px;
-        font-weight: ${shapes.fontWeight || 'normal'};
-        font-style: ${shapes.fontStyle || 'normal'};
-        fill: ${shapes.stroke};
-        dominant-baseline: middle;
-        text-anchor: middle;
-      }
-    `;
+            .annotation-shape {
+                stroke: ${shapes.stroke};
+                stroke-width: ${shapes.strokeWidth}px;
+                stroke-opacity: ${shapes.strokeOpacity};
+                fill: ${shapes.fill || 'transparent'};
+                fill-opacity: ${shapes.fillOpacity || 0};
+                vector-effect: non-scaling-stroke;
+            }
+
+            .selection-outline {
+                stroke: ${this.FIXED_OUTLINE_COLOR};
+                fill: none;
+                vector-effect: non-scaling-stroke;
+            }
+
+            .annotation-handle {
+                fill: ${this.FIXED_HANDLE_FILL};
+                stroke: ${this.FIXED_HANDLE_STROKE};
+                stroke-width: 1px;
+                vector-effect: non-scaling-stroke;
+                cursor: pointer;
+            }
+
+            .annotation-handle:hover {
+                stroke: ${this.FIXED_OUTLINE_COLOR};
+                stroke-width: 2px;
+            }
+
+            .annotation-text {
+                font-family: ${shapes.fontFamily || 'Arial, sans-serif'};
+                fill: ${this.FIXED_LABEL_TEXT_FILL};
+                dominant-baseline: middle;
+                text-anchor: middle;
+            }
+
+            .a9s-label-bbox {
+                rx: 2;
+                ry: 2;
+                vector-effect: non-scaling-stroke;
+            }
+
+            .annotation-shape.hover {
+                stroke: ${this.FIXED_OUTLINE_COLOR};
+            }
+        `;
+  }
+
+  // Validation method to ensure style consistency
+  validateStyle(style: Partial<ShapeStyle>): boolean {
+    // Don't allow setting computed properties directly
+    const computedProps = [
+      'selectionOutlineColor',
+      'selectionOutlineWidth',
+      'handleFill',
+      'handleStroke',
+      'labelTextFill',
+    ];
+    return !computedProps.some((prop) => prop in style);
   }
 
   clearAllStyles(): void {

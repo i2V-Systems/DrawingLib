@@ -205,6 +205,12 @@ export class EditManager extends EventEmitter {
           text: (this.editingShape as any).labelElement.textContent,
           type: 'text'
         };
+        const shapeGeometry = this.editingShape.getGeometry();
+        this.emit('updateGeometry', {
+          id: this.editingShapeId,
+          geometry: shapeGeometry,
+          type: 'shape'
+        });
         this.emit('updateGeometry', {
           id: this.editingShapeId,
           geometry: labelGeometry,

@@ -14,7 +14,6 @@ import { EditManager } from '../managers/EditManager';
 import { convertToViewportCoordinates } from '../../utils/SVGUtils';
 import { TextGeometry } from '../../types';
 
-
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
   toolType?: string;
@@ -37,12 +36,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   constructor(config: OpenSeadragonAnnotatorConfig) {
     super();
-
     this.config = {
       toolType: 'rectangle',
       autoSave: true,
       crosshair: true,
-      ...config
+      ...config,
     };
 
     this.viewer = config.viewer;
@@ -53,9 +51,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       enableClickHandling: false,
       useNaturalCoordinates: true,
     });
-    
+
     this.svg = this.svgOverlay.svg();
-    
+
     // Add touch support
     const isTouch = isTouchDevice();
     if (isTouch) {
@@ -79,6 +77,15 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.editManager = new EditManager(this.svgOverlay);
     this.toolManager = new ToolManager(this.svgOverlay);
 
+    // Listen for zoom changes and update StyleManager
+    this.viewer.addHandler('zoom', () => {
+      this.handleZoomChange();
+    });
+
+    this.viewer.addHandler('animation-finish', () => {
+      this.handleZoomChange();
+    });
+
     // Listen for geometry updates from EditManager
     this.editManager.on('updateGeometry', ({ id, geometry, type }) => {
       const annotation = this.state.getAnnotation(id);
@@ -91,9 +98,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
               ...annotation.target,
               selector: {
                 ...annotation.target.selector,
-                geometry
-              }
-            }
+                geometry,
+              },
+            },
           });
         }
       }
@@ -101,10 +108,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     // Initialize crosshair if enabled
     if (this.config.crosshair) {
-      const crosshairConfig = typeof this.config.crosshair === 'boolean' 
-        ? { enabled: this.config.crosshair }
-        : this.config.crosshair;
-      
+      const crosshairConfig =
+        typeof this.config.crosshair === 'boolean'
+          ? { enabled: this.config.crosshair }
+          : this.config.crosshair;
       this.crosshair = new Crosshair(this.svg, crosshairConfig);
     }
 
@@ -112,27 +119,34 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state.on('create', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationCreated(annotation);
-  });
+    });
+
     this.state.on('update', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationUpdated(annotation);
     });
+
     this.state.on('delete', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationDeleted(annotation);
     });
+
     this.state.on('select', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationSelected(annotation);
     });
+
     this.state.on('deselect', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationDeselected(annotation);
     });
 
-    this.editManager.on('editingDragStarted', () => this.viewer.setMouseNavEnabled(false));
-    this.editManager.on('editingDragStopped', () => this.viewer.setMouseNavEnabled(true));
-
+    this.editManager.on('editingDragStarted', () =>
+      this.viewer.setMouseNavEnabled(false)
+    );
+    this.editManager.on('editingDragStopped', () =>
+      this.viewer.setMouseNavEnabled(true)
+    );
 
     // Get image natural width and height
     const item = this.viewer.world.getItemAt(0);
@@ -140,42 +154,45 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     const imageBounds = { naturalWidth, naturalHeight };
 
     // Register tools
-    const tools = createTools(this.svg, (shape) => {
-      if (shape) {
-        // Remove the tool's shape from SVG before creating the annotation
-        if (shape.getElement().parentNode) {
-          shape.getElement().parentNode.removeChild(shape.getElement());
-        }
-        const geometry = shape.getGeometry();
-        const shapeAnnotation: Annotation = {
-          id: crypto.randomUUID(),
-          type: 'Annotation',
-          body: [],
-          target: {
-            source: config.imageUrl || '',
-            selector: {
-              type: 'SvgSelector',
-              geometry
-            }
+    const tools = createTools(
+      this.svg,
+      (shape) => {
+        if (shape) {
+          // Remove the tool's shape from SVG before creating the annotation
+          if (shape.getElement().parentNode) {
+            shape.getElement().parentNode.removeChild(shape.getElement());
           }
-        };
 
-        this.addAnnotation(shapeAnnotation);
-        this.toolManager.deactivateActiveTool();
-      }
-    }, imageBounds);
-    
-    tools.forEach(tool => this.toolManager.registerTool(tool));
+          const geometry = shape.getGeometry();
+          const shapeAnnotation: Annotation = {
+            id: crypto.randomUUID(),
+            type: 'Annotation',
+            body: [],
+            target: {
+              source: config.imageUrl || '',
+              selector: {
+                type: 'SvgSelector',
+                geometry,
+              },
+            },
+          };
 
+          this.addAnnotation(shapeAnnotation);
+          this.toolManager.deactivateActiveTool();
+        }
+      },
+      imageBounds
+    );
+
+    tools.forEach((tool) => this.toolManager.registerTool(tool));
 
     // Setup click handling and keyboard shortcuts
     this.setupClickHandling();
 
-
     // Listen for tool manager events to update crosshair
     this.toolManager.on('toolActivated', (evt) => {
-        this.toolManager.startDrawing();
-        this.crosshair?.setDrawingMode(true);
+      this.toolManager.startDrawing();
+      this.crosshair?.setDrawingMode(true);
     });
 
     this.toolManager.on('toolDeactivated', () => {
@@ -188,31 +205,61 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.redrawAll();
   }
 
+  private handleZoomChange(): void {
+    const currentZoom = this.viewer.viewport.getZoom(true);
+
+    // Update StyleManager with current zoom
+    this.styleManager.setCurrentZoom(currentZoom);
+
+    // Update all shapes with new zoom-adjusted styles
+    this.updateAllShapeStyles();
+  }
+
+  private updateAllShapeStyles(): void {
+    const annotations = this.state.getAll();
+
+    for (const annotation of annotations) {
+      const shape = this.state.getShape(annotation.id);
+      if (shape) {
+        // Get updated style from StyleManager (includes zoom adjustments)
+        const style = this.styleManager.getStyle(annotation.id);
+
+        // Apply the style to the shape
+        shape.applyStyle(style);
+      }
+    }
+  }
 
   private setupClickHandling(): void {
     // Handle click events for smart selection (when not in drawing mode)
-    this.viewer.addHandler('canvas-click', (event: OpenSeadragon.CanvasClickEvent) => {
-      event.preventDefaultAction = false;
+    this.viewer.addHandler(
+      'canvas-click',
+      (event: OpenSeadragon.CanvasClickEvent) => {
+        event.preventDefaultAction = false;
 
-      // Don't handle clicks when drawing
-      if (this.toolManager.isDrawing()) {
-        return;
+        // Don't handle clicks when drawing
+        if (this.toolManager.isDrawing()) {
+          return;
+        }
+
+        const webPoint = new OpenSeadragon.Point(
+          event.position.x,
+          event.position.y
+        );
+        const viewportPoint = this.viewer.viewport.pointFromPixel(webPoint);
+        const img =
+          this.viewer.viewport.viewportToImageCoordinates(viewportPoint);
+        const imagePoint = { x: img.x, y: img.y };
+
+        const hitResult = this.state.findHitAnnotation(imagePoint);
+        if (hitResult) {
+          this.clearSelectionAndEditing();
+          this.selectAnnotation(hitResult.id);
+        } else {
+          this.clearSelectionAndEditing();
+        }
       }
-
-      const webPoint = new OpenSeadragon.Point(event.position.x, event.position.y);
-      const viewportPoint = this.viewer.viewport.pointFromPixel(webPoint);
-      const img = this.viewer.viewport.viewportToImageCoordinates(viewportPoint);
-      const imagePoint = { x: img.x, y: img.y };
-
-      const hitResult = this.state.findHitAnnotation(imagePoint);
-      
-      if (hitResult) {
-        this.clearSelectionAndEditing();
-        this.selectAnnotation(hitResult.id);
-      } else {
-        this.clearSelectionAndEditing();
-      }
-    });
+    );
 
     // Disable OpenSeadragon mouse gestures when drawing
     this.toolManager.on('drawingStarted', () => {
@@ -223,8 +270,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       this.viewer.setMouseNavEnabled(true);
     });
   }
-
-
 
   private redrawAll(): void {
     // Clear the overlay node (not the entire SVG)
@@ -237,8 +282,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     for (const annotation of annotations) {
       const geometry = annotation.target.selector.geometry;
       const id = annotation.id!;
-      let shape = (this.state as any).shapes?.get?.(id);
 
+      let shape = (this.state as any).shapes?.get?.(id);
       if (!shape) {
         shape = ShapeFactory.createFromGeometry(id, geometry);
         (this.state as any).shapes?.set?.(id, shape);
@@ -251,18 +296,23 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     }
   }
 
-
+  // Update addAnnotation to remove svgOverlay parameter
   addAnnotation(annotation: Annotation): void {
     const shape = ShapeFactory.createFromGeometry(
       annotation.id || crypto.randomUUID(),
-      convertToViewportCoordinates(annotation.target.selector.geometry, this.viewer.viewport)
+      convertToViewportCoordinates(
+        annotation.target.selector.geometry,
+        this.viewer.viewport
+      )
+      // Remove svgOverlay parameter
     );
+    this.state.add(annotation, shape);
     if (annotation.style) {
       this.styleManager.setCustomStyle(annotation.id, annotation.style);
     }
+
     const style = this.styleManager.getStyle(annotation.id);
     shape.applyStyle(style);
-    this.state.add(annotation, shape);
     this.redrawAll();
   }
 
@@ -276,11 +326,13 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     if (update.style) {
       this.styleManager.setCustomStyle(id, update.style);
     }
+
     const shape = this.state.getShape(id);
     if (shape) {
       const style = this.styleManager.getStyle(id);
       shape.applyStyle(style);
     }
+
     this.redrawAll();
   }
 
@@ -296,8 +348,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.editManager.stopEditing();
     this.state.deselectAll();
   }
-
-  
 
   disableEditing(id: string): void {
     this.editManager.stopEditing();
@@ -316,7 +366,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     if (annotation) {
       this.state.update(id, {
         ...annotation,
-        body: [...annotation.body, body]
+        body: [...annotation.body, body],
       });
       this.redrawAll();
     }
@@ -346,14 +396,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.redrawAll();
   }
 
-
   getTheme(): Theme {
     return this.styleManager.getTheme();
   }
 
-
   getAvailableTools(): string[] {
-    return this.toolManager.getTools().map(tool => tool.name);
+    return this.toolManager.getTools().map((tool) => tool.name);
   }
 
   activateTool(name: string): void {
@@ -400,8 +448,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     // Clean up managers
     this.toolManager.destroy();
     this.crosshair?.destroy();
+
     // Destroy SVG overlay
     this.svgOverlay.destroy();
+
     // Clear state
     this.state.clear();
   }
@@ -420,6 +470,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     for (const annotation of annotations) {
       this.addAnnotation(annotation);
     }
+
     this.redrawAll();
   }
 
@@ -442,6 +493,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       shape.setSelected(true);
       this.editManager.startEditing(annotation.id, shape);
     }
+
     this.emit('select', annotation);
   }
 
@@ -450,8 +502,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     if (shape) {
       shape.setSelected(false);
     }
+
     this.editManager.stopEditing();
     this.emit('deselect', annotation);
   }
-
 }

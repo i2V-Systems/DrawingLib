@@ -31,6 +31,39 @@
     },
     "style": { "stroke": "red", "strokeWidth": 10 },
     "customData": { "note": "Grouped shape 1" }
+  },
+  {
+    "id": "demo-rect-2",
+    "type": "shape",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Rectangle 2"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "rectangle",
+          "x": 800,
+          "y": 500,
+          "width": 200,
+          "height": 150
+        }
+      }
+    },
+    "label":{
+          "type": "text",
+          "x": 900,
+          "y": 470,
+          "text": "Rectangle Label 2",
+          "fontSize": 16,
+          "fontFamily": "Arial"
+    },
+    "style": { "stroke": "#00FF00", "strokeWidth": 5 },
+    "customData": { "note": "Grouped shape 2" }
   }
 
 ] 

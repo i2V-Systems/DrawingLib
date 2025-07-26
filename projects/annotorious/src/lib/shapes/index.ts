@@ -1,5 +1,4 @@
 export * from './base';
-export * from './editable';
 export * from './TextShape';
 export * from './FreehandShape';
 export * from './PolygonShape';
