@@ -8,7 +8,7 @@ export interface ShapeStyle {
   strokeOpacity: number;
   fill?: string;
   fillOpacity?: number;
-
+  arrowStroke?: string; // Specific for arrow shapes
   // Base handle size (will be computed based on strokeWidth)
   baseHandleSize: number;
   handleSize: number; // Computed based on strokeWidth and zoom
@@ -56,7 +56,7 @@ export const lightTheme: Theme = {
 export const darkTheme: Theme = {
   shapes: {
     ...lightTheme.shapes,
-    stroke: '#ffffff',
+    stroke: '#3cd37bff',
     handleFill: '#000000',
     handleStroke: '#ffffff',
     selectionOutlineColor: '#4a90e2',
@@ -81,6 +81,7 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
   private readonly FIXED_HANDLE_FILL = '#000000';
   private readonly FIXED_HANDLE_STROKE = '#000000';
   private readonly FIXED_LABEL_TEXT_FILL = 'white';
+  private readonly FIXED_ARROW_STROKE = '#000000';
 
   constructor(theme: Theme = lightTheme) {
     super();
@@ -141,7 +142,7 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
       handleFill: this.FIXED_HANDLE_FILL,
       handleStroke: this.FIXED_HANDLE_STROKE,
       labelTextFill: this.FIXED_LABEL_TEXT_FILL,
-
+      arrowStroke: this.FIXED_ARROW_STROKE,
       // Zoom-adjusted properties
       handleSize: computedHandleSize,
       fontSize: baseStyle.fontSize

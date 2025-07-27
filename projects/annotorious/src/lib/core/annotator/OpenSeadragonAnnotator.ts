@@ -455,7 +455,68 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     // Clear state
     this.state.clear();
   }
+  /**
+   * Set or update label for an annotation
+   */
+  setLabel(
+    annotationId: string,
+    labelText: string,
+    position?: { x: number; y: number }
+  ): void {
+    const annotation = this.state.getAnnotation(annotationId);
+    if (!annotation) {
+      throw new Error(`Annotation with id '${annotationId}' not found`);
+    }
 
+    const shape = this.state.getShape(annotationId);
+    if (!shape) {
+      throw new Error(`Shape for annotation '${annotationId}' not found`);
+    }
+
+    // Calculate default position if not provided
+    let labelPosition = position;
+    if (!labelPosition) {
+      const shapeBbox = shape.getBBox();
+      labelPosition = {
+        x: shapeBbox.x + shapeBbox.width / 2,
+        y: shapeBbox.y - 10, // 10px above the shape
+      };
+    }
+
+    const labelGeometry: TextGeometry = {
+      type: 'text',
+      text: labelText,
+      x: labelPosition.x,
+      y: labelPosition.y,
+    };
+
+    // Update annotation with label
+    this.updateAnnotation(annotationId, {
+      label: labelGeometry,
+    });
+
+    this.emit('labelSet', { annotationId, label: labelGeometry });
+  }
+
+  /**
+   * Remove label from an annotation
+   */
+  removeLabel(annotationId: string): void {
+    const annotation = this.state.getAnnotation(annotationId);
+    if (!annotation || !annotation.label) {
+      return;
+    }
+    const shape = this.state.getShape(annotationId);
+    if (shape) {
+      shape.removeLabel();
+    }
+    this.updateAnnotation(annotationId, {
+      label: undefined,
+    });
+
+
+    this.emit('labelRemoved', { annotationId });
+  }
   /**
    * Set the current annotations (replace all existing)
    */

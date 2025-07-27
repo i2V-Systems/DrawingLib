@@ -7,12 +7,19 @@ export class PolylineArrowShape extends BaseShape {
   private arrows: PolylineArrowGeometry['arrows'] = [];
   private arrowElements: SVGTextElement[] = [];
   private arrowGroup?: SVGGElement;
+  private polylineElement: SVGPolylineElement;
 
   constructor(id: string, geometry: PolylineArrowGeometry) {
-    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    super(id, group as unknown as SVGGraphicsElement);
-    
-    this.initializeElements();
+
+    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    polyline.setAttribute('class', 'annotation-shape');
+    polyline.setAttribute('fill', 'none');
+    super(id, polyline);
+    this.polylineElement = polyline as SVGPolylineElement;
+    // Create arrow group for the Unicode symbols
+    this.arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.arrowGroup.setAttribute('class', 'polyline-arrow-symbols');
+    this.rootGroup.appendChild(this.arrowGroup);
     this.update(geometry);
   }
 
@@ -53,6 +60,8 @@ export class PolylineArrowShape extends BaseShape {
     }));
     this.updatePolyline();
     this.updateArrowSymbols();
+    this.updateOutline();
+    this.updateHandlePositions();
     this.emit('geometryChanged', { geometry: this.getGeometry() });
   }
 
@@ -90,7 +99,7 @@ export class PolylineArrowShape extends BaseShape {
     
     // Apply style to arrow symbols
     this.arrowElements.forEach(arrow => {
-      arrow.style.fill = style.stroke;
+      arrow.style.fill = style.arrowStroke;
     });
   }
 
@@ -117,30 +126,18 @@ export class PolylineArrowShape extends BaseShape {
     
     this.points[idx] = { x: newPosition.x, y: newPosition.y };
     this.updatePolyline();
+    this.updateOutline();
     this.updateArrowSymbols();
     this.updateHandlePositions();
   }
 
   // PRIVATE IMPLEMENTATION METHODS
 
-  private initializeElements(): void {
-    // Create the base polyline
-    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-    polyline.setAttribute('class', 'annotation-shape');
-    polyline.setAttribute('fill', 'none');
-    this.rootGroup.appendChild(polyline);
-    
-    // Create arrow group for the Unicode symbols
-    this.arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    this.arrowGroup.setAttribute('class', 'polyline-arrow-symbols');
-    this.rootGroup.appendChild(this.arrowGroup);
-  }
 
   private updatePolyline(): void {
-    const polyline = this.rootGroup.querySelector('polyline');
-    if (polyline && this.points.length > 0) {
+    if (this.polylineElement && this.points.length > 0) {
       const pointsString = this.points.map(p => `${p.x},${p.y}`).join(' ');
-      polyline.setAttribute('points', pointsString);
+      this.polylineElement.setAttribute('points', pointsString);
     }
   }
 

@@ -10,6 +10,7 @@ interface ShapeEvents {
   hover: { id: string };
   unhover: { id: string };
   geometryChanged: { geometry: Geometry };
+  labelUpdated: { id: string; label: TextGeometry };
 }
 
 export abstract class BaseShape
@@ -44,6 +45,7 @@ export abstract class BaseShape
     this.selectionOutline = this.shapeElement.cloneNode(
       false
     ) as SVGGraphicsElement;
+    this.selectionOutline.classList.remove('annotation-shape');
     this.selectionOutline.classList.add('selection-outline');
     this.selectionOutline.style.display = 'none';
     this.selectionOutline.style.fill = 'none';
@@ -94,6 +96,8 @@ export abstract class BaseShape
 
   // Simplified updateLabel method
   updateLabel(label: TextGeometry): void {
+    this.labelElement.style.display = '';
+    this.labelBbox.style.display = '';
     this.labelElement.setAttribute('x', label.x.toString());
     this.labelElement.setAttribute('y', label.y.toString());
     this.labelElement.textContent = label.text;
@@ -317,5 +321,62 @@ export abstract class BaseShape
         }
       }
     }
+  }
+
+  
+  /**
+   * Set label with automatic positioning
+   */
+  setLabel(text: string, position?: Point): void {
+    let labelPosition = position;
+    
+    if (!labelPosition) {
+      // Auto-calculate position based on shape
+      labelPosition = this.getDefaultLabelPosition();
+    }
+
+    const labelGeometry: TextGeometry = {
+      type: 'text',
+      text,
+      x: labelPosition.x,
+      y: labelPosition.y
+    };
+
+    this.updateLabel(labelGeometry);
+    this.emit('labelUpdated', { id: this.id, label: labelGeometry });
+  }
+
+  /**
+   * Get default label position for this shape type
+   */
+  protected getDefaultLabelPosition(): Point {
+    const bbox = this.getBBox();
+    return {
+      x: bbox.x + bbox.width / 2,
+      y: bbox.y - 10
+    };
+  }
+
+  /**
+   * Check if shape has a label
+   */
+  hasLabel(): boolean {
+    return this.labelElement.textContent !== null && this.labelElement.textContent.trim() !== '';
+  }
+
+  /**
+   * Get current label text
+   */
+  getLabelText(): string {
+    return this.labelElement.textContent || '';
+  }
+
+  /**
+   * Remove label from shape
+   */
+  removeLabel(): void {
+    this.labelElement.textContent = '';
+    this.labelElement.style.display = 'none';
+    this.labelBbox.style.display = 'none';
   }
 }

@@ -3,7 +3,7 @@ import { Annotation } from '../../types/annotation.types';
 import { Shape } from '../../shapes/base';
 import { SpatialIndex } from './SpatialIndex';
 import { HitDetection, SVGUtils } from '../../utils';
-import { Point } from '../../types/shape.types';
+import { Point, TextGeometry } from '../../types/shape.types';
 interface AnnotationStateEvents {
   create: { id: string };
   update: { id: string };
@@ -139,6 +139,73 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.emit('delete', { id });
   }
 
+    /**
+   * Set label for an annotation with spatial index update
+   */
+  setLabel(id: string, labelGeometry: TextGeometry): void {
+    const annotation = this.annotations.get(id);
+    if (!annotation) return;
+
+    // Remove old label from spatial index
+    if (annotation.label) {
+      const oldLabelBbox = SVGUtils.getAnnotationBBox({ 
+        target: { selector: { geometry: annotation.label } } 
+      } as Annotation);
+      if (oldLabelBbox) {
+        this.spatialIndex.remove({ ...oldLabelBbox, id: `label-${id}` });
+      }
+    }
+
+    // Update annotation with new label
+    const updated = { ...annotation, label: labelGeometry };
+    this.annotations.set(id, updated);
+
+    // Add new label to spatial index
+    const newLabelBbox = SVGUtils.getAnnotationBBox({ 
+      target: { selector: { geometry: labelGeometry } } 
+    } as Annotation);
+    if (newLabelBbox) {
+      this.spatialIndex.insert({ ...newLabelBbox, id: `label-${id}` });
+    }
+
+    // Update shape
+    const shape = this.shapes.get(id);
+    if (shape) {
+      shape.updateLabel(labelGeometry);
+    }
+
+    this.emit('update', { id });
+  }
+
+  /**
+   * Remove label from an annotation
+   */
+  removeLabel(id: string): void {
+    const annotation = this.annotations.get(id);
+    if (!annotation || !annotation.label) return;
+
+    // Remove from spatial index
+    const labelBbox = SVGUtils.getAnnotationBBox({ 
+      target: { selector: { geometry: annotation.label } } 
+    } as Annotation);
+    if (labelBbox) {
+      this.spatialIndex.remove({ ...labelBbox, id: `label-${id}` });
+    }
+
+    // Update annotation
+    const updated = { ...annotation };
+    delete updated.label;
+    this.annotations.set(id, updated);
+
+    // Update shape
+    const shape = this.shapes.get(id);
+    if (shape) {
+      shape.removeLabel();
+    }
+
+    this.emit('update', { id });
+  }
+  
   /**
    * Select an annotation and start editing it
    */

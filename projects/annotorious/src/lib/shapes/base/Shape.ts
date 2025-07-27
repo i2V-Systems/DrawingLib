@@ -43,6 +43,7 @@ export interface Shape {
 
   updateLabel(label: TextGeometry): void;
 
+  removeLabel(): void;
   /**
    * Apply style to the shape
    */

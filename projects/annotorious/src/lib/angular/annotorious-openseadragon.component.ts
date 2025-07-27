@@ -29,6 +29,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   @Output() editingStopped = new EventEmitter<any>();
   @Output() shapeMoved = new EventEmitter<any>();
   @Output() shapeResized = new EventEmitter<any>();
+  @Output() annotatorReady = new EventEmitter<OpenSeadragonAnnotator>();
 
   tools: string[] = [];
   activeTool: string | null = null;
@@ -72,6 +73,10 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
           this.tools = this.annotator.getAvailableTools();
           this.activeTool = this.annotator.getActiveTool();
           this.cdr.detectChanges();
+          
+          // Emit annotator ready event
+          this.annotatorReady.emit(this.annotator);
+          
           // Add event listeners
           this.annotator.on('create', (evt: AnnotationEvent) => {
             this.annotationCreated.emit(evt);
@@ -137,5 +142,21 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
 
   setAnnotations(annotations: any[]): void {
     this.annotator.setAnnotations(annotations);
+  }
+
+  setLabel(annotationId: string, label: string, position?: { x: number, y: number }): void {
+    if (this.annotator) {
+      this.annotator.setLabel(annotationId, label, position);
+    }
+  }
+
+  removeLabel(annotationId: string): void {
+    if (this.annotator) {
+      this.annotator.removeLabel(annotationId);
+    }
+  }
+
+  getAllAvailableTools(): string[] {
+    return this.annotator.getAvailableTools();
   }
 }

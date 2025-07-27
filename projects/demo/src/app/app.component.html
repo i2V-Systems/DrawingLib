@@ -1,8 +1,29 @@
+<div class="controls">
+  <div class="toolbar">
+    <button 
+      *ngFor="let tool of tools"
+      (click)="setTool(tool)" 
+      [class.active]="currentTool === tool">
+      {{ tool | titlecase }}
+    </button>
+  </div>
+  
+  <!-- Debug element -->
+  <div class="debug-info">Selected ID: {{selectedAnnotationId}}</div>
+
+  <div class="label-controls" [style.display]="selectedAnnotationId ? 'flex' : 'none'">
+    <button (click)="addLabelToSelected()">Add Basic Label</button>
+    <button (click)="addCustomPositionLabel()">Add Custom Position Label</button>
+    <button (click)="removeSelectedLabel()" class="remove-btn">Remove Label</button>
+  </div>
+</div>
+
 <lib-annotorious-openseadragon
   [imageSource]="dziUrl"
   [theme]="theme"
   [defaultTool]="'polygon'"
   [showToolbar]="true"
+  (annotatorReady)="onAnnotatorReady($event)"
   (annotationCreated)="onAnnotationCreated($event)"
   (annotationUpdated)="onAnnotationUpdated($event)"
   (annotationDeleted)="onAnnotationDeleted($event)"
