@@ -106,6 +106,7 @@ export class SVGUtils {
           maxY: geom.y + geom.height
         };
       case 'polygon':
+      case 'polyline-arrow':
       case 'freehand':
         if (geom.points && geom.points.length) {
           const xs = geom.points.map((p: any) => p.x);

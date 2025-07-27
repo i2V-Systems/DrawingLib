@@ -21,13 +21,13 @@
         }
       }
     },
-    "label":{
-          "type": "text",
-          "x": 650,
-          "y": 370,
-          "text": "Rectangle Label",
-          "fontSize": 16,
-          "fontFamily": "Arial"
+    "label": {
+      "type": "text",
+      "x": 650,
+      "y": 370,
+      "text": "Rectangle Label",
+      "fontSize": 16,
+      "fontFamily": "Arial"
     },
     "style": { "stroke": "red", "strokeWidth": 10 },
     "customData": { "note": "Grouped shape 1" }
@@ -54,16 +54,47 @@
         }
       }
     },
-    "label":{
-          "type": "text",
-          "x": 900,
-          "y": 470,
-          "text": "Rectangle Label 2",
-          "fontSize": 16,
-          "fontFamily": "Arial"
+    "label": {
+      "type": "text",
+      "x": 900,
+      "y": 470,
+      "text": "Rectangle Label 2",
+      "fontSize": 16,
+      "fontFamily": "Arial"
     },
     "style": { "stroke": "#00FF00", "strokeWidth": 5 },
     "customData": { "note": "Grouped shape 2" }
+  },
+  {
+    "id": "arrow-polygon-1",
+    "type": "shape",
+    "body": [
+      {
+        "type": "TextualBody",
+        "purpose": "tagging",
+        "value": "Grouped Rectangles"
+      }
+    ],
+    "target": {
+      "selector": {
+        "type": "SvgSelector",
+        "geometry": {
+          "type": "polyline-arrow",
+          "points": [
+            { "x": 100, "y": 100 },
+            { "x": 200, "y": 100 },
+            { "x": 200, "y": 200 },
+            { "x": 100, "y": 200 }
+          ],
+          "arrows": [
+            { "startIndex": 0, "endIndex": 1, "direction": "up" },
+    { "startIndex": 1, "endIndex": 2, "direction": "down" },
+    { "startIndex": 2, "endIndex": 3, "direction": "both" }
+          ]
+        }
+      }
+    },
+    "style": { "stroke": "#0000FF", "strokeWidth": 2, "fillOpacity": 0.1 },
+    "customData": { "note": "This is a group of rectangles" }
   }
-
-] 
+]

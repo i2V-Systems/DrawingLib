@@ -1,4 +1,4 @@
-import { Geometry, Point, RectangleGeometry, TextGeometry } from '../types/shape.types';
+import { Geometry, Point, PolylineArrowGeometry, RectangleGeometry, TextGeometry } from '../types/shape.types';
 import { SVGUtils } from './SVGUtils';
 
 export interface HitTestResult {
@@ -165,31 +165,11 @@ private static distanceToTextBounds(point: Point, bounds: { x: number; y: number
         return this.hitTestPoint(point, geometry, tolerance);
       case 'text':
         return this.hitTestText(point, geometry, tolerance);
+      case 'polyline-arrow':
+        return this.hitTestPolyline(point, geometry, tolerance);
       default:
         return { hit: false, distance: Infinity, tolerance };
     }
-  }
-
-  /**
-   * Check if a point is inside a polygon using ray casting algorithm
-   */
-  private static isPointInPolygon(point: Point, polygon: Point[]): boolean {
-    let inside = false;
-    const n = polygon.length;
-    
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = polygon[i].x;
-      const yi = polygon[i].y;
-      const xj = polygon[j].x;
-      const yj = polygon[j].y;
-      
-      if (((yi > point.y) !== (yj > point.y)) && 
-          (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-    }
-    
-    return inside;
   }
 
   /**
@@ -260,5 +240,83 @@ private static distanceToTextBounds(point: Point, bounds: { x: number; y: number
     
     // Find minimum distance to any edge
     return Math.min(left, right, top, bottom);
+  }
+
+  /**
+   * Hit detection for polylines (open paths)
+   * Tests if a point is within tolerance distance of any line segment
+   */
+  static hitTestPolyline(
+    point: Point, 
+    geometry: Geometry,
+    tolerance: number = 5
+  ): HitTestResult {
+    const points = (geometry as PolylineArrowGeometry).points;
+    if (!points || points.length < 2) {
+      return { hit: false, distance: Infinity , tolerance };
+    }
+
+    let minDistance = Infinity;
+    let hitSegmentIndex = -1;
+
+    // Test each line segment
+    for (let i = 0; i < points.length - 1; i++) {
+      const segmentStart = points[i];
+      const segmentEnd = points[i + 1];
+      
+      const result = this.pointToLineSegmentDistance(point, segmentStart, segmentEnd);
+      
+      if (result.distance < minDistance) {
+        minDistance = result.distance;
+        hitSegmentIndex = i;
+      }
+    }
+
+    const hit = minDistance <= tolerance;
+    return {
+      hit,
+      distance: minDistance,
+      tolerance
+    };
+  }
+
+  /**
+   * Calculate distance from a point to a line segment
+   */
+  private static pointToLineSegmentDistance(
+    point: Point,
+    segmentStart: Point,
+    segmentEnd: Point
+  ): { distance: number; closestPoint: Point } {
+    const dx = segmentEnd.x - segmentStart.x;
+    const dy = segmentEnd.y - segmentStart.y;
+    const lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared === 0) {
+      // Degenerate segment (start == end)
+      const distance = Math.sqrt(
+        (point.x - segmentStart.x) ** 2 + (point.y - segmentStart.y) ** 2
+      );
+      return { distance, closestPoint: segmentStart };
+    }
+
+    // Project point onto the line segment
+    let t = ((point.x - segmentStart.x) * dx + (point.y - segmentStart.y) * dy) / lengthSquared;
+    
+    // Clamp t to [0, 1] to stay within the segment
+    t = Math.max(0, Math.min(1, t));
+
+    // Find the closest point on the segment
+    const closestPoint = {
+      x: segmentStart.x + t * dx,
+      y: segmentStart.y + t * dy
+    };
+
+    // Calculate distance from point to closest point on segment
+    const distance = Math.sqrt(
+      (point.x - closestPoint.x) ** 2 + (point.y - closestPoint.y) ** 2
+    );
+
+    return { distance, closestPoint };
   }
 } 

@@ -119,3 +119,15 @@
 .crosshair-group {
   pointer-events: none;
 }
+
+.arrow-polygon-arrow {
+  stroke: inherit;
+  stroke-width: inherit;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.arrow-polygon-arrows {
+  pointer-events: none;
+}

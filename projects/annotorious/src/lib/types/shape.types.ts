@@ -62,6 +62,17 @@ export interface FreehandGeometry extends BaseGeometry {
   smoothing?: number;
 }
 
+export interface PolylineArrowGeometry extends BaseGeometry {
+  type: 'polyline-arrow';
+  points: Point[];
+  arrows: {
+    startIndex: number;
+    endIndex: number;
+    direction: 'up' | 'down' | 'both';
+  }[];
+}
+
+
 /**
  * Text geometry
  */
@@ -107,4 +118,5 @@ export type Geometry =
   | EllipseGeometry
   | FreehandGeometry
   | TextGeometry
-  | PointGeometry; 
+  | PointGeometry
+  | PolylineArrowGeometry; 

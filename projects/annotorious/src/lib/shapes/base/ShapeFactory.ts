@@ -6,7 +6,8 @@ import { EllipseShape } from '../EllipseShape';
 import { TextShape } from '../TextShape';
 import { PointShape } from '../PointShape';
 import { FreehandShape } from '../FreehandShape';
-import { Geometry, PointGeometry, FreehandGeometry } from '../../types/shape.types';
+import { Geometry, PointGeometry, FreehandGeometry, PolylineArrowGeometry } from '../../types/shape.types';
+import { PolylineArrowShape } from '../ArrowPolylineShape';
 
 export class ShapeFactory {
   /**
@@ -139,7 +140,10 @@ export class ShapeFactory {
       
         case 'freehand':
           return new FreehandShape(id, geometry as FreehandGeometry);
-      
+
+        case 'polyline-arrow':
+          return new PolylineArrowShape(id, geometry as PolylineArrowGeometry);
+          
         default:
           throw new Error(`Unsupported geometry type: null`);
       }

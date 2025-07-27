@@ -14,7 +14,7 @@ import { EllipseTool } from './EllipseTool';
 import { PointTool } from './PointTool';
 import { FreehandTool } from './FreehandTool';
 import { Tool } from './base/Tool';
-
+import { PolylineArrowTool } from './PolylineArrowTool';
 export const createTools = (
   svg: SVGSVGElement,
   onComplete: (shape: any) => void,
@@ -28,6 +28,7 @@ export const createTools = (
     new PolygonTool(svg, onComplete, bounds),
     new PointTool(svg, onComplete, bounds),
     new FreehandTool(svg, onComplete, bounds),
+    new PolylineArrowTool(svg, onComplete, bounds)
   ];
 
   return tools;
