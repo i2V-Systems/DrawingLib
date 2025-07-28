@@ -30,6 +30,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   @Output() shapeMoved = new EventEmitter<any>();
   @Output() shapeResized = new EventEmitter<any>();
   @Output() annotatorReady = new EventEmitter<OpenSeadragonAnnotator>();
+  @Output() contextMenuClicked = new EventEmitter<any>();
 
   tools: string[] = [];
   activeTool: string | null = null;
@@ -105,6 +106,9 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
           this.annotator.on('shapeResized', (evt: any) => {
             this.shapeResized.emit(evt);
           });
+          this.annotator.on('context-menu', (evt: any) => {
+            this.contextMenuClicked.emit(evt);
+          })
         });
       });
     });
@@ -160,6 +164,10 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
     if (this.annotator) {
       this.annotator.setAnnotationStyle(annotationId, style);
     }
+  }
+
+  changeArrowDirection(startIndex : number, endIndex : number, direction :'up' | 'down' | 'both'): void {
+    this.annotator.changeArrowDirection(startIndex, endIndex, direction);
   }
 
   getAllAvailableTools(): string[] {

@@ -8,12 +8,15 @@ export class ArrowSymbolRenderer {
   } as const;
 
   /**
-   * Create SVG text element for arrow symbol with proper rotation
+   * Create SVG text element for arrow symbol with proper rotation and data attributes
    */
   static createArrowSymbol(
     position: Point, 
     symbol: string, 
-    segmentAngle: number, // Add segment angle parameter
+    segmentAngle: number,
+    startIndex: number,
+    endIndex: number,
+    direction: string,
     config: {
       fontSize?: number;
       className?: string;
@@ -31,50 +34,75 @@ export class ArrowSymbolRenderer {
     text.setAttribute('fill', config.fill || 'currentColor');
     text.setAttribute('class', config.className || 'arrow-symbol');
     
+    // Add data attributes for segment identification
+    text.setAttribute('data-start-index', startIndex.toString());
+    text.setAttribute('data-end-index', endIndex.toString());
+    text.setAttribute('data-direction', direction);
+    
     // Apply rotation to align with segment
-    const rotationDegrees = (segmentAngle * 180 / Math.PI); // +90 to make arrows perpendicular
+    const rotationDegrees = (segmentAngle * 180 / Math.PI);
     text.setAttribute('transform', `rotate(${rotationDegrees} ${position.x} ${position.y})`);
     
-    text.style.pointerEvents = 'none';
+    // Enable pointer events for clicking (remove the none setting)
+    text.style.pointerEvents = 'auto';
     text.style.userSelect = 'none';
+    text.style.cursor = 'pointer';
     
     return text;
   }
 
   /**
-   * Create arrow symbols for a segment based on direction with proper rotation
+   * Create arrow symbols for a segment based on direction with proper rotation and data attributes
    */
   static createSymbolsForSegment(
     segmentData: {
+      startIndex: number;
+      endIndex: number;
       midPoint: Point;
       perpendicularPoint?: Point;
       perpendicularPoints?: Point[];
       direction: string;
-      segmentAngle: number; // Include segment angle
+      segmentAngle: number;
     },
     config?: { fontSize?: number; className?: string; fill?: string }
   ): SVGTextElement[] {
     const symbols: SVGTextElement[] = [];
+    const { startIndex, endIndex, direction } = segmentData;
 
-    if (segmentData.direction === 'both' && segmentData.perpendicularPoints) {
+    if (direction === 'both' && segmentData.perpendicularPoints) {
       // For 'both' direction, create one symbol that shows both directions
       symbols.push(
         this.createArrowSymbol(
           segmentData.midPoint, 
           this.ARROW_SYMBOLS.both, 
           segmentData.segmentAngle,
+          startIndex,
+          endIndex,
+          'both',
           config
         )
       );
-    } else {
-      // For single direction arrows
-      const symbolKey = segmentData.direction as keyof typeof this.ARROW_SYMBOLS;
-      const symbolChar = this.ARROW_SYMBOLS[symbolKey] || this.ARROW_SYMBOLS.up;
+    } else if (direction === 'up') {
       symbols.push(
         this.createArrowSymbol(
           segmentData.midPoint, 
-          symbolChar, 
+          this.ARROW_SYMBOLS.up, 
           segmentData.segmentAngle,
+          startIndex,
+          endIndex,
+          'up',
+          config
+        )
+      );
+    } else if (direction === 'down') {
+      symbols.push(
+        this.createArrowSymbol(
+          segmentData.midPoint, 
+          this.ARROW_SYMBOLS.down, 
+          segmentData.segmentAngle,
+          startIndex,
+          endIndex,
+          'down',
           config
         )
       );

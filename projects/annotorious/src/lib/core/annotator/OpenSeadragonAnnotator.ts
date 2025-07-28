@@ -147,6 +147,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.editManager.on('editingDragStopped', () =>
       this.viewer.setMouseNavEnabled(true)
     );
+    this.editManager.on('arrowSymbolClicked', (event) => {
+      console.log('Arrow symbol clicked:', event);
+      this.emit('context-menu', event);
+    });
 
     // Get image natural width and height
     const item = this.viewer.world.getItemAt(0);
@@ -394,6 +398,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   setAnnotationStyle(id: string, style: Partial<ShapeStyle>): void {
     this.styleManager.setCustomStyle(id, style);
     this.redrawAll();
+  }
+  
+  changeArrowDirection(startIndex : number, endIndex : number, direction :'up' | 'down' | 'both'): void{
+    this.editManager.changeArrowDirection(startIndex, endIndex, direction);
   }
 
   getTheme(): Theme {

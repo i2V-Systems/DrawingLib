@@ -1,11 +1,12 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/public-api';
 import { AppComponent } from './app.component';
-import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/lib/angular/annotorious-openseadragon.module';
-
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [
+    AppComponent
+  ],
   imports: [
     BrowserModule,
     AnnotoriousOpenseadragonModule,
@@ -13,4 +14,4 @@ import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/lib/ang
   providers: [],
   bootstrap: [AppComponent]
 })
-export class AppModule { } 
+export class AppModule { }

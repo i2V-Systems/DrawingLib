@@ -1,7 +1,4 @@
 import { Component, ViewChild, NgZone } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
-import { AnnotoriousOpenseadragonModule } from '../../../annotorious/src/public-api';
 import { AnnotationEvent } from '../../../annotorious/src/lib/types/annotation.types';
 import { darkTheme } from '../../../annotorious/src/lib/core/managers/StyleManager';
 import { AnnotoriousOpenseadragonComponent } from '../../../annotorious/src/lib/angular/annotorious-openseadragon.component';
@@ -9,8 +6,6 @@ import demoAnnotations from '../../public/demo-annotations.json';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, AnnotoriousOpenseadragonModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -31,7 +26,6 @@ export class AppComponent {
   }
 
   ngOnInit() {
-    // Tools will be initialized when annotator is ready
   }
 
   @ViewChild(AnnotoriousOpenseadragonComponent)
@@ -49,6 +43,11 @@ export class AppComponent {
     console.log('Annotation deleted:', event);
   }
 
+  onContextMenuClicked(event: any) {
+    this.ngZone.run(() => {
+      this.annotoriousComp.changeArrowDirection(event.startIndex, event.endIndex, "both");
+    })
+  }
   selectedAnnotationId: string | null = null;
 
   onAnnotationSelected(event: any) {

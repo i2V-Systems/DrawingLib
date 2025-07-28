@@ -38,7 +38,6 @@ export class PolygonShape extends BaseShape {
       y: point.y + deltaY
     }));
     this.update({ type: 'polygon', points: this.points });
-    this.emit('geometryChanged', { geometry: this.getGeometry() });
   }
 
   protected override showEditHandles(): void {
