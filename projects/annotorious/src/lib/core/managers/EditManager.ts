@@ -169,12 +169,13 @@ export class EditManager extends EventEmitter {
     const deltaY = currentPos.y - this.dragContext.lastPointerPos.y;
 
     if (this.dragContext.type === 'shape') {
-      this.editingShape.moveBy(deltaX, deltaY);
+      const clampedDelta = this.clampShapeToSVG(this.editingShape, deltaX, deltaY);
+      this.editingShape.moveBy(clampedDelta.deltaX, clampedDelta.deltaY);
       this.dragContext.lastPointerPos = currentPos;
       this.emit('entityDragged', { 
         id: this.editingShapeId, 
         type: 'shape',
-        delta: { x: deltaX, y: deltaY }
+        delta: { x: clampedDelta.deltaX, y: clampedDelta.deltaY }
       });
     } else if (this.dragContext.type === 'label') {
       const newPosition = { x: currentPos.x, y: currentPos.y };
@@ -186,7 +187,7 @@ export class EditManager extends EventEmitter {
         delta: { x: deltaX, y: deltaY }
       });
     } else if (this.dragContext.type === 'handle' && this.dragContext.element) {
-      const clampedPos = this.clampToSVG(currentPos);
+      const clampedPos = this.clampPointToSVG(currentPos);
       (this.editingShape as any).updateFromHandle(this.dragContext.element, clampedPos);
       this.emit('handleDragged', { 
         id: this.editingShapeId,
@@ -228,13 +229,26 @@ export class EditManager extends EventEmitter {
     return this.overlay.eventToImage(event);
   }
 
-  private clampToSVG(point: Point): Point {
+private clampPointToSVG(point: Point): Point {
     const imageBounds = this.overlay.getImageDimensions();
     return {
-      x: Math.max(0, Math.min(point.x, imageBounds.width)),
-      y: Math.max(0, Math.min(point.y, imageBounds.height))
+        x: Math.max(0, Math.min(point.x, imageBounds.width)),
+        y: Math.max(0, Math.min(point.y, imageBounds.height))
     };
-  }
+}
+
+private clampShapeToSVG(shape: Shape, deltaX: number, deltaY: number): { deltaX: number, deltaY: number } {
+    const bbox = shape.getBBox();
+    const imageBounds = this.overlay.getImageDimensions();
+    
+    const clampedDeltaX = Math.max(-bbox.x, 
+        Math.min(deltaX, imageBounds.width - bbox.x - bbox.width));
+    const clampedDeltaY = Math.max(-bbox.y, 
+        Math.min(deltaY, imageBounds.height - bbox.y - bbox.height));
+        
+    return { deltaX: clampedDeltaX, deltaY: clampedDeltaY };
+}
+
 
   getCurrentEditingEntity(): { id: string; type: 'shape' } | null {
     return this.editingShape && this.editingShapeId ? {

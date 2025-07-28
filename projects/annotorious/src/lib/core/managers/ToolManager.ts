@@ -84,7 +84,6 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
     if (this.enabled && this.state.isDrawing) {
       event.preventDefault();
       event.stopPropagation();
-      console.log(event)
       const point = this.getMousePosition(event);
       this.handleMouseDown(point, event);
     }
@@ -303,7 +302,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
    * Get mouse position in SVG coordinates
    */
   private getMousePosition(event: PointerEvent): Point {
-    return this.overlay.eventToImage(event);
+    return this.overlay.screenToSvg(event.clientX, event.clientY);
   }
 
   /**

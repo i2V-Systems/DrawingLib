@@ -163,7 +163,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
             shape.getElement().parentNode.removeChild(shape.getElement());
           }
 
-          const geometry = shape.getGeometry();
+          const geometry = this.svgOverlay.convertSvgGeometryToImage(shape.getGeometry());
           const shapeAnnotation: Annotation = {
             id: crypto.randomUUID(),
             type: 'Annotation',

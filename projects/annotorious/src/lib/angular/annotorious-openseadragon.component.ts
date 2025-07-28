@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Input, Output, Eve
 import OpenSeadragon from 'openseadragon';
 import { OpenSeadragonAnnotator } from '../core/annotator/OpenSeadragonAnnotator';
 import { AnnotationEvent } from '../types/annotation.types';
-import { Theme, lightTheme, darkTheme } from '../core/managers/StyleManager';
+import { Theme, lightTheme, darkTheme, ShapeStyle } from '../core/managers/StyleManager';
 
 @Component({
   selector: 'lib-annotorious-openseadragon',
@@ -153,6 +153,12 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
   removeLabel(annotationId: string): void {
     if (this.annotator) {
       this.annotator.removeLabel(annotationId);
+    }
+  }
+
+  setStrokeStyle(annotationId: string, style: Partial<ShapeStyle>): void {
+    if (this.annotator) {
+      this.annotator.setAnnotationStyle(annotationId, style);
     }
   }
 
