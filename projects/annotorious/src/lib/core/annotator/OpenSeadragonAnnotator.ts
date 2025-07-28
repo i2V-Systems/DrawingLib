@@ -167,7 +167,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
             shape.getElement().parentNode.removeChild(shape.getElement());
           }
 
-          const geometry = this.svgOverlay.convertSvgGeometryToImage(shape.getGeometry());
+          const geometry = this.svgOverlay.convertSvgGeometryToImage(
+            shape.getGeometry()
+          );
           const shapeAnnotation: Annotation = {
             id: crypto.randomUUID(),
             type: 'Annotation',
@@ -276,7 +278,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   private redrawAll(): void {
-    // Clear the overlay node (not the entire SVG)
     const overlayNode = this.svgOverlay.node();
     while (overlayNode.firstChild) {
       overlayNode.removeChild(overlayNode.firstChild);
@@ -284,19 +285,36 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     const annotations = this.state.getAll();
     for (const annotation of annotations) {
-      const geometry = annotation.target.selector.geometry;
       const id = annotation.id!;
-
       let shape = (this.state as any).shapes?.get?.(id);
-      if (!shape) {
-        shape = ShapeFactory.createFromGeometry(id, geometry);
-        (this.state as any).shapes?.set?.(id, shape);
-      } else {
-        shape.update(geometry);
-      }
 
-      const svgElement = shape.getElement();
-      overlayNode.appendChild(svgElement);
+      // Don't overwrite geometry for currently editing shape, but still update styles
+      if (this.editManager.isEditingEntity(id)) {
+        // Re-append the existing shape element (preserves current geometry state)
+        if (shape) {
+          overlayNode.appendChild(shape.getElement());
+
+          // Apply updated styles to the editing shape
+          const style = this.styleManager.getStyle(id);
+          shape.applyStyle(style);
+        }
+      } else {
+        // Normal redraw logic for non-editing shapes
+        const geometry = annotation.target.selector.geometry;
+        if (!shape) {
+          shape = ShapeFactory.createFromGeometry(id, geometry);
+          (this.state as any).shapes?.set?.(id, shape);
+        } else {
+          shape.update(geometry);
+        }
+
+        const svgElement = shape.getElement();
+        overlayNode.appendChild(svgElement);
+
+        // Apply styles to non-editing shapes
+        const style = this.styleManager.getStyle(id);
+        shape.applyStyle(style);
+      }
     }
   }
 
@@ -399,8 +417,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.styleManager.setCustomStyle(id, style);
     this.redrawAll();
   }
-  
-  changeArrowDirection(startIndex : number, endIndex : number, direction :'up' | 'down' | 'both'): void{
+
+  changeArrowDirection(
+    startIndex: number,
+    endIndex: number,
+    direction: 'up' | 'down' | 'both'
+  ): void {
     this.editManager.changeArrowDirection(startIndex, endIndex, direction);
   }
 
@@ -521,7 +543,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.updateAnnotation(annotationId, {
       label: undefined,
     });
-
 
     this.emit('labelRemoved', { annotationId });
   }

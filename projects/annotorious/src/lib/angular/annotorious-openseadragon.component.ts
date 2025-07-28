@@ -148,6 +148,12 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
     this.annotator.setAnnotations(annotations);
   }
 
+  setStyle(annotationId: string, style: { stroke?: string; strokeWidth?: number }): void {
+    if (this.annotator) {
+      this.annotator.setAnnotationStyle(annotationId, style);
+    }
+  }
+
   setLabel(annotationId: string, label: string, position?: { x: number, y: number }): void {
     if (this.annotator) {
       this.annotator.setLabel(annotationId, label, position);
@@ -160,7 +166,7 @@ export class AnnotoriousOpenseadragonComponent implements OnInit, OnDestroy, Aft
     }
   }
 
-  setStrokeStyle(annotationId: string, style: Partial<ShapeStyle>): void {
+  setAnnotationStyle(annotationId: string, style: Partial<ShapeStyle>): void {
     if (this.annotator) {
       this.annotator.setAnnotationStyle(annotationId, style);
     }

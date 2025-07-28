@@ -1,6 +1,6 @@
 import { Component, ViewChild, NgZone } from '@angular/core';
 import { AnnotationEvent } from '../../../annotorious/src/lib/types/annotation.types';
-import { darkTheme } from '../../../annotorious/src/lib/core/managers/StyleManager';
+import { darkTheme, ShapeStyle } from '../../../annotorious/src/lib/core/managers/StyleManager';
 import { AnnotoriousOpenseadragonComponent } from '../../../annotorious/src/lib/angular/annotorious-openseadragon.component';
 import demoAnnotations from '../../public/demo-annotations.json';
 
@@ -49,6 +49,9 @@ export class AppComponent {
     })
   }
   selectedAnnotationId: string | null = null;
+  currentLabel: string = '';
+  currentColor: string = '#ff0000';
+  currentStrokeWidth: number = 2;
 
   onAnnotationSelected(event: any) {
     console.log('Annotation selected:', event);
@@ -56,6 +59,13 @@ export class AppComponent {
     this.ngZone.run(() => {
       this.selectedAnnotationId = event.annotation?.id || event.id;
       console.log('Selected ID set to:', this.selectedAnnotationId);
+      
+      // Get current annotation properties if available
+      if (event.annotation) {
+        this.currentLabel = event.annotation.label || '';
+        this.currentColor = event.annotation.style?.stroke || '#ff0000';
+        this.currentStrokeWidth = event.annotation.style?.strokeWidth || 2;
+      }
     });
   }
 
@@ -68,21 +78,34 @@ export class AppComponent {
     });
   }
 
-  addLabelToSelected() {
+  onLabelChange(value: string) {
+    this.currentLabel = value;
+  }
+
+  onColorChange(value: string) {
+    this.currentColor = value;
+  }
+
+  setLabel() {
     if (this.selectedAnnotationId) {
-      // Add a basic label
-      this.annotoriousComp.setLabel(this.selectedAnnotationId, 'Test Label');
+      this.annotoriousComp.setLabel(this.selectedAnnotationId, this.currentLabel);
     }
   }
 
-  addCustomPositionLabel() {
+  setColor() {
+    if (this.selectedAnnotationId && this.currentColor) {
+      this.annotoriousComp.setAnnotationStyle(this.selectedAnnotationId, { stroke: this.currentColor });
+    }
+  }
+
+
+  onStrokeWidthChange(width: number) {
+    this.currentStrokeWidth = width;
+  }
+
+  setStrokeWidth() {
     if (this.selectedAnnotationId) {
-      // Add a label with custom position
-      this.annotoriousComp.setLabel(
-        this.selectedAnnotationId, 
-        'Custom Position Label',
-        { x: 100, y: 50 }
-      );
+      this.annotoriousComp.setStyle(this.selectedAnnotationId, { strokeWidth: this.currentStrokeWidth });
     }
   }
 

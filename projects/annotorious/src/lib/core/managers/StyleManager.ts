@@ -109,8 +109,12 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
   }
 
   setCustomStyle(id: string, style: Partial<ShapeStyle>): void {
-    this.customStyles.set(id, { ...style });
-    this.emit('styleChanged', { id, style });
+    // Get existing custom style or empty object if none exists
+    const existingStyle = this.customStyles.get(id) || {};
+    // Merge existing style with new style properties
+    const mergedStyle = { ...existingStyle, ...style };
+    this.customStyles.set(id, mergedStyle);
+    this.emit('styleChanged', { id, style: mergedStyle });
   }
 
   removeCustomStyle(id: string): void {
