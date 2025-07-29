@@ -273,6 +273,8 @@ export class PolylineArrowShape extends BaseShape {
 
   protected override showEditHandles(): void {
     if (this.handles.length === 0) {
+    const currentStyle = this.getCurrentStyle();
+    const handleSize = currentStyle ? currentStyle.handleSize : 6;
       this.handles = this.points.map((pt) => {
         const handle = document.createElementNS(
           'http://www.w3.org/2000/svg',
@@ -280,7 +282,7 @@ export class PolylineArrowShape extends BaseShape {
         );
         handle.setAttribute('cx', pt.x.toString());
         handle.setAttribute('cy', pt.y.toString());
-        handle.setAttribute('r', '6');
+        handle.setAttribute('r', (handleSize / 2).toString());
         handle.setAttribute('class', 'a9s-handle');
         this.handlesGroup.appendChild(handle);
         return handle;

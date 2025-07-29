@@ -153,8 +153,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Get image natural width and height
-    const item = this.viewer.world.getItemAt(0);
-    const { x: naturalWidth, y: naturalHeight } = item.source.dimensions;
+    const item = this.viewer.viewport.getContainerSize();
+    const { x: naturalWidth, y: naturalHeight } = item;
     const imageBounds = { naturalWidth, naturalHeight };
 
     // Register tools
@@ -563,6 +563,50 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     this.redrawAll();
   }
+
+  /**
+ * Save changes made to the currently selected/editing shape
+ */
+public saveSelectedShapeChanges(): boolean {
+  const currentEntity = this.editManager.getCurrentEditingEntity();
+  if (!currentEntity) {
+    console.warn('No shape is currently selected for editing');
+    return false;
+  }
+  
+  return this.saveShapeChanges(currentEntity.id);
+}
+
+/**
+ * Save changes for a specific shape
+ */
+public saveShapeChanges(annotationId: string): boolean {
+  const shape = this.state.getShape(annotationId);
+  if (!shape) {
+    console.warn(`Shape with ID ${annotationId} not found`);
+    return false;
+  }
+
+  try {
+    // Get current geometry from the shape
+    const currentGeometry = shape.getGeometry();
+    
+    // Update the annotation data with current shape state
+    this.updateAnnotation(annotationId, {
+      target: {
+        selector: {
+          type: 'SvgSelector',
+          geometry: currentGeometry
+        }
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Failed to save shape changes:', error);
+    return false;
+  }
+}
 
   private onAnnotationCreated(annotation: Annotation): void {
     this.emit('create', annotation);

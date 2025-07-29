@@ -266,7 +266,7 @@ export class SvgOverlay implements SvgOverlayInfo {
     ) {
       this._svg.setAttribute(
         'viewBox',
-        `0 0 ${this._imageWidth} ${this._imageHeight}`
+        `0 0 ${containerWidth} ${containerHeight}`
       );
     } else {
       this._svg.setAttribute('viewBox', '0 0 1 1');

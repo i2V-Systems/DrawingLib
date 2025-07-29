@@ -122,13 +122,16 @@ export class FreehandShape extends BaseShape {
     this.hideEditHandles();
     const handleInterval = 1;
     this.handlePoints = [];
+    const currentStyle = this.getCurrentStyle();
+    const handleSize = currentStyle ? currentStyle.handleSize : 6;
+      
     this.handles = this.geometry.points.reduce((handles, pt, i) => {
       if (i % handleInterval === 0) {
         this.handlePoints.push({ point: pt, originalIndex: i });
         const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         handle.setAttribute('cx', pt.x.toString());
         handle.setAttribute('cy', pt.y.toString());
-        handle.setAttribute('r', '6');
+        handle.setAttribute('r', (handleSize / 2).toString());
         handle.setAttribute('class', 'a9s-handle');
         this.pathElement.parentNode?.appendChild(handle);
         handles.push(handle);

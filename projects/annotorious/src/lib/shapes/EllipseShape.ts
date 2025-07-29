@@ -105,11 +105,14 @@ export class EllipseShape extends BaseShape {
         { x: this.cx, y: this.cy - this.ry },
         { x: this.cx, y: this.cy + this.ry }
       ];
+      const currentStyle = this.getCurrentStyle();
+      const handleSize = currentStyle ? currentStyle.handleSize : 6;
+      
       this.handles = positions.map(pos => {
         const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         handle.setAttribute('cx', pos.x.toString());
         handle.setAttribute('cy', pos.y.toString());
-        handle.setAttribute('r', '6');
+        handle.setAttribute('r', (handleSize / 2).toString());
         handle.setAttribute('class', 'a9s-handle');
         this.handlesGroup.appendChild(handle);
         return handle;
@@ -117,6 +120,16 @@ export class EllipseShape extends BaseShape {
     }
     this.updateHandlePositions();
     super.showEditHandles();
+  }
+
+  override applyStyle(style: any): void {
+    super.applyStyle(style);
+    // Update handle sizes when style changes
+    if (this.handles.length > 0 && style.handleSize) {
+      this.handles.forEach(handle => {
+        handle.setAttribute('r', (style.handleSize / 2).toString());
+      });
+    }
   }
 
   protected override hideEditHandles(): void {

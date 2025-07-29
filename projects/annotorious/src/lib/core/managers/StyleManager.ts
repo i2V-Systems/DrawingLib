@@ -38,9 +38,9 @@ export const lightTheme: Theme = {
     strokeOpacity: 1,
     fill: 'transparent',
     fillOpacity: 0.1,
-    baseHandleSize: 6, // Base size, will be computed with strokeWidth
+    baseHandleSize: 4, // Base size, will be computed with strokeWidth
     fontFamily: 'Arial, sans-serif',
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: 'normal',
     fontStyle: 'normal',
     handleSize: 6, // Will be computed based on strokeWidth

@@ -13,7 +13,7 @@ export class AppComponent {
   constructor(private ngZone: NgZone) {}
 
   title = 'demo';
-  dziUrl = { type: 'image', url : '/demo.jpg'};
+  dziUrl = { type: 'image', url : '/demo2.jpg'};
   theme = darkTheme;
   tools: string[] = [];
   currentTool: string = 'rectangle';
@@ -105,7 +105,7 @@ export class AppComponent {
 
   setStrokeWidth() {
     if (this.selectedAnnotationId) {
-      this.annotoriousComp.setStyle(this.selectedAnnotationId, { strokeWidth: this.currentStrokeWidth });
+      this.annotoriousComp.setAnnotationStyle(this.selectedAnnotationId, { strokeWidth: this.currentStrokeWidth });
     }
   }
 
