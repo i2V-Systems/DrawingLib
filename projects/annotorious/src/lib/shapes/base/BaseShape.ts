@@ -268,6 +268,7 @@ export abstract class BaseShape
 
   enableEditing(): void {
     this.shapeElement.classList.add('editing');
+    this.labelElement.style.cursor = 'move';
     this.showEditHandles();
   }
 

@@ -318,6 +318,34 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     }
   }
 
+  loadAnnotations(annotations: Annotation[]): void {
+    this.state.clear();
+    const overlayNode = this.svgOverlay.node();
+    while (overlayNode.firstChild) {
+      overlayNode.removeChild(overlayNode.firstChild);
+    }
+    this.state.loadAnnotations(
+      annotations.map((annotation) => {
+        const shape = ShapeFactory.createFromGeometry(
+          annotation.id || crypto.randomUUID(),
+          convertToViewportCoordinates(
+            annotation.target.selector.geometry,
+            this.viewer.viewport
+          )
+        );
+        return { annotation, shape };
+      })
+    );
+
+    // Apply styles to loaded annotations
+    for (const annotation of annotations) {
+      if (annotation.style) {
+        this.styleManager.setCustomStyle(annotation.id, annotation.style);
+      }
+    }
+
+    this.redrawAll();
+  }
   // Update addAnnotation to remove svgOverlay parameter
   addAnnotation(annotation: Annotation): void {
     const shape = ShapeFactory.createFromGeometry(
@@ -326,7 +354,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         annotation.target.selector.geometry,
         this.viewer.viewport
       )
-      // Remove svgOverlay parameter
     );
     this.state.add(annotation, shape);
     if (annotation.style) {
@@ -545,23 +572,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     this.emit('labelRemoved', { annotationId });
-  }
-  /**
-   * Set the current annotations (replace all existing)
-   */
-  public setAnnotations(annotations: Annotation[]): void {
-    // Clear current annotations and overlay
-    this.state.clear();
-    const overlayNode = this.svgOverlay.node();
-    while (overlayNode.firstChild) {
-      overlayNode.removeChild(overlayNode.firstChild);
-    }
-
-    for (const annotation of annotations) {
-      this.addAnnotation(annotation);
-    }
-
-    this.redrawAll();
   }
 
   /**

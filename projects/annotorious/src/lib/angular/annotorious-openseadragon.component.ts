@@ -41,10 +41,7 @@ export class AnnotoriousOpenseadragonComponent
   };
   @Input() showNavigationControl: boolean = false;
   @Input() showToolbar: boolean = false;
-  @Input() imageSource: any = {
-    type: 'image',
-    url: 'https://images.pexels.com/photos/32920370/pexels-photo-32920370.jpeg',
-  };
+  @Input() imageSource: any;
   @Input() theme: Theme = lightTheme;
   @Input() defaultTool:
     | 'rectangle'
@@ -54,6 +51,10 @@ export class AnnotoriousOpenseadragonComponent
     | 'freehand'
     | 'text' = 'rectangle';
 
+  @Input() labelText: string = '';
+  @Input() strokeColor: string = '#FF0000';
+  @Input() strokeWidth: number = 2;
+
   @Output() annotationCreated = new EventEmitter<AnnotationEvent>();
   @Output() annotationUpdated = new EventEmitter<AnnotationEvent>();
   @Output() annotationDeleted = new EventEmitter<AnnotationEvent>();
@@ -61,6 +62,7 @@ export class AnnotoriousOpenseadragonComponent
   @Output() annotationDeselected = new EventEmitter<any>();
   @Output() annotatorReady = new EventEmitter<OpenSeadragonAnnotator>();
   @Output() contextMenuClicked = new EventEmitter<any>();
+  @Output() OsdViewerReady = new EventEmitter<OpenSeadragon.Viewer>();
 
   tools: string[] = [];
   activeTool: string | null = null;
@@ -97,7 +99,10 @@ export class AnnotoriousOpenseadragonComponent
         this.annotator.on('create', (evt: any) => {
           this.ngZone.run(() => {
             this.annotationCreated.emit(evt);
-            this.cdr.detectChanges();
+            this.annotator.setAnnotationStyle(evt.id, {
+              stroke: this.strokeColor,
+              strokeWidth: this.strokeWidth} as Partial<ShapeStyle>);
+            this.annotator.setLabel(evt.id, this.labelText);
           });
         });
 
@@ -160,7 +165,10 @@ export class AnnotoriousOpenseadragonComponent
       this.viewer = OpenSeadragon({
         id: this.viewerId,
         prefixUrl: 'assets/openseadragon/images/',
-        tileSources: this.imageSource,
+        tileSources: {
+          type: 'image',
+          url: this.imageSource,
+        },
         defaultZoomLevel: 1,
         minZoomLevel: this.zoom.minZoomLevel,
         maxZoomLevel: this.zoom.maxZoomLevel,
@@ -173,6 +181,12 @@ export class AnnotoriousOpenseadragonComponent
           dblClickToZoom: false,
         },
         visibilityRatio: 1,
+      });
+      this.viewer.addHandler('open', () => {
+        this.ngZone.run(() => {
+          this.OsdViewerReady.emit(this.viewer);
+          this.cdr.detectChanges();
+        });
       });
     });
   }
@@ -192,7 +206,9 @@ export class AnnotoriousOpenseadragonComponent
   }
 
   getAnnotationById(id: string): Annotation | null {
-    return this.annotator ? this.annotator.getAnnotations().find(a => a.id === id) || null : null;
+    return this.annotator
+      ? this.annotator.getAnnotations().find((a) => a.id === id) || null
+      : null;
   }
 
   activateTool(tool: string): void {
@@ -209,7 +225,7 @@ export class AnnotoriousOpenseadragonComponent
   setAnnotations(annotations: any[]): void {
     this.ngZone.run(() => {
       if (this.annotator) {
-        this.annotator.setAnnotations(annotations);
+        this.annotator.loadAnnotations(annotations);
         this.cdr.detectChanges();
       }
     });
@@ -289,33 +305,33 @@ export class AnnotoriousOpenseadragonComponent
   }
 
   /**
- * Save changes made to the currently selected shape
- * This commits temporary editing changes to the annotation data
- */
-public saveSelectedShapeChanges(): boolean {
-  return this.ngZone.run(() => {
-    if (this.annotator) {
-      const success = this.annotator.saveSelectedShapeChanges();
-      this.cdr.detectChanges();
-      return success;
-    }
-    return false;
-  });
-}
+   * Save changes made to the currently selected shape
+   * This commits temporary editing changes to the annotation data
+   */
+  public saveSelectedShapeChanges(): boolean {
+    return this.ngZone.run(() => {
+      if (this.annotator) {
+        const success = this.annotator.saveSelectedShapeChanges();
+        this.cdr.detectChanges();
+        return success;
+      }
+      return false;
+    });
+  }
 
-/**
- * Save changes for a specific shape by ID
- */
-public saveShapeChanges(annotationId: string): boolean {
-  return this.ngZone.run(() => {
-    if (this.annotator) {
-      const success = this.annotator.saveShapeChanges(annotationId);
-      this.cdr.detectChanges();
-      return success;
-    }
-    return false;
-  });
-}
+  /**
+   * Save changes for a specific shape by ID
+   */
+  public saveShapeChanges(annotationId: string): boolean {
+    return this.ngZone.run(() => {
+      if (this.annotator) {
+        const success = this.annotator.saveShapeChanges(annotationId);
+        this.cdr.detectChanges();
+        return success;
+      }
+      return false;
+    });
+  }
 
   getAllAvailableTools(): string[] {
     // Synchronous getter - no zone management needed

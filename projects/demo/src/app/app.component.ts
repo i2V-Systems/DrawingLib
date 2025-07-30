@@ -13,7 +13,7 @@ export class AppComponent {
   constructor(private ngZone: NgZone) {}
 
   title = 'demo';
-  dziUrl = { type: 'image', url : '/demo2.jpg'};
+  dziUrl = '/demo2.jpg';
   theme = darkTheme;
   tools: string[] = [];
   currentTool: string = 'rectangle';

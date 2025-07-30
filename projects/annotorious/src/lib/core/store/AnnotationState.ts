@@ -5,6 +5,7 @@ import { SpatialIndex } from './SpatialIndex';
 import { HitDetection, SVGUtils } from '../../utils';
 import { Point, TextGeometry } from '../../types/shape.types';
 interface AnnotationStateEvents {
+  loaded: {};
   create: { id: string };
   update: { id: string };
   delete: { id: string };
@@ -26,6 +27,41 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.shapes = new Map();
     this.spatialIndex = new SpatialIndex();
   }
+
+
+  /**
+ * Load annotations in batch without firing create events for each.
+ */
+loadAnnotations(annotationShapes : {annotation : Annotation, shape : Shape}[]): void {
+    for (const aS of annotationShapes) {
+    const id = aS.annotation.id || crypto.randomUUID();
+    aS.annotation.id = id;
+    this.annotations.set(id, aS.annotation);
+    if (aS.shape) {
+      this.shapes.set(id, aS.shape);
+      const bbox = SVGUtils.getAnnotationBBox(aS.annotation);
+      if (bbox) {
+        this.spatialIndex.insert({ ...bbox, id });
+      }
+      if (aS.annotation.label) {
+        if (!aS.annotation.label.x || !aS.annotation.label.y) {
+          const shapeBbox = SVGUtils.getAnnotationBBox(aS.annotation);
+          if (shapeBbox) {
+            aS.annotation.label.x = shapeBbox.minX + (shapeBbox.maxX - shapeBbox.minX) / 2;
+            aS.annotation.label.y = shapeBbox.minY - 10; // 10px above the bbox
+          }
+        }
+        const labelBbox = SVGUtils.getAnnotationBBox({ target: { selector: { geometry: aS.annotation.label } } } as Annotation);
+        if (labelBbox) {
+          this.spatialIndex.insert({ ...labelBbox, id: `label-${id}` });
+        }
+        aS.shape.updateLabel(aS.annotation.label);
+      }
+    }
+  }
+
+  this.emit('loaded', { });
+}
 
 
   /**

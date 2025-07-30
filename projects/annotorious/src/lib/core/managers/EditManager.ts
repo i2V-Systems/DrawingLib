@@ -92,7 +92,6 @@ export class EditManager extends EventEmitter {
         'pointerdown',
         this.listeners['labelPointerDown']
       );
-      labelElement.style.cursor = 'move';
     }
   }
 

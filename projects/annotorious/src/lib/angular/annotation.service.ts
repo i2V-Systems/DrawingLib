@@ -56,7 +56,7 @@ polygon(
     style: {
       stroke: strokeColor,
       strokeWidth: strokeWidth,
-      fill: 'transparent',
+      fill: 'none',
       fillOpacity: 0.1
     }
   };
@@ -103,7 +103,7 @@ rectangle(
     style: {
       stroke: strokeColor,
       strokeWidth: strokeWidth,
-      fill: 'transparent',
+      fill: 'none',
       fillOpacity: 0.1
     }
   };
@@ -157,7 +157,7 @@ polylineArrow(
     style: {
       stroke: strokeColor,
       strokeWidth: strokeWidth,
-      fill: 'transparent',
+      fill: 'none',
       fillOpacity: 0.1
     }
   };

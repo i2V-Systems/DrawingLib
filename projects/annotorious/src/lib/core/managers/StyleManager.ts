@@ -36,7 +36,7 @@ export const lightTheme: Theme = {
     stroke: '#000000',
     strokeWidth: 2,
     strokeOpacity: 1,
-    fill: 'transparent',
+    fill: 'none',
     fillOpacity: 0.1,
     baseHandleSize: 4, // Base size, will be computed with strokeWidth
     fontFamily: 'Arial, sans-serif',
@@ -140,6 +140,7 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
     return {
       ...baseStyle,
       // Fixed computed properties
+      fill: 'none',
       selectionOutlineColor: this.FIXED_OUTLINE_COLOR,
       selectionOutlineWidth:
         baseStyle.strokeWidth + this.FIXED_OUTLINE_WIDTH_OFFSET,
@@ -168,7 +169,7 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
                 stroke: ${shapes.stroke};
                 stroke-width: ${shapes.strokeWidth}px;
                 stroke-opacity: ${shapes.strokeOpacity};
-                fill: ${shapes.fill || 'transparent'};
+                fill: none;
                 fill-opacity: ${shapes.fillOpacity || 0};
                 vector-effect: non-scaling-stroke;
             }
