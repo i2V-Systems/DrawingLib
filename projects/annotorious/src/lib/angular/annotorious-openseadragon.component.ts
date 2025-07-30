@@ -40,7 +40,6 @@ export class AnnotoriousOpenseadragonComponent
     maxZoomLevel: 20,
   };
   @Input() showNavigationControl: boolean = false;
-  @Input() showToolbar: boolean = false;
   @Input() imageSource: any;
   @Input() theme: Theme = lightTheme;
   @Input() defaultTool:

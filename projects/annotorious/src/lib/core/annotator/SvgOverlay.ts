@@ -233,6 +233,7 @@ export class SvgOverlay implements SvgOverlayInfo {
         };
 
       case 'text':
+      case 'point':
         const textPos = this.svgToImage(geometry.x, geometry.y);
         return {
           ...geometry,
@@ -247,9 +248,9 @@ export class SvgOverlay implements SvgOverlayInfo {
   }
 
   private getScaleFactor(): number {
-    if (this._config.useNaturalCoordinates) {
-      return 1; // No scaling needed with natural coordinates
-    }
+    // if (this._config.useNaturalCoordinates) {
+    //   return 1; // No scaling needed with natural coordinates
+    // }
     return this._currentScale();
   }
 

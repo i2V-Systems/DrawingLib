@@ -37,6 +37,7 @@ export class CircleShape extends BaseShape {
     this.shapeElement.setAttribute('r', r.toString());
 
     this.updateOutline();
+    this.updateHandlePositions();
   }
 
   public override getEditHandles(): { x: number; y: number; type: string; element: SVGCircleElement }[] {
@@ -63,16 +64,12 @@ export class CircleShape extends BaseShape {
       this.r = Math.sqrt(Math.pow(newPosition.x - this.cx, 2) + Math.pow(newPosition.y - this.cy, 2));
     }
     this.update({ type: 'circle', cx: this.cx, cy: this.cy, r: this.r });
-    this.updateHandlePositions();
   }
 
   public override moveBy(deltaX: number, deltaY: number): void {
     this.cx += deltaX;
     this.cy += deltaY;
     this.update({ type: 'circle', cx: this.cx, cy: this.cy, r: this.r });
-    if (this.handles && this.handles.length > 0) {
-      this.updateHandlePositions();
-    }
   }
 
   protected override showEditHandles(): void {

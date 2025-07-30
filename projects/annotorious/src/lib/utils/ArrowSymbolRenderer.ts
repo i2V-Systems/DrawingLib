@@ -46,7 +46,6 @@ export class ArrowSymbolRenderer {
     // Enable pointer events for clicking (remove the none setting)
     text.style.pointerEvents = 'auto';
     text.style.userSelect = 'none';
-    text.style.cursor = 'pointer';
     
     return text;
   }

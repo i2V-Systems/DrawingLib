@@ -58,17 +58,18 @@ export abstract class BaseShape
     this.handlesGroup.setAttribute('class', 'a9s-handles-group');
     this.handlesGroup.style.display = 'none';
 
-    // Assemble the structure
-    this.rootGroup.appendChild(this.selectionOutline);
-    this.rootGroup.appendChild(this.shapeElement);
-
-    this.labelElement = document.createElementNS(
+        this.labelElement = document.createElementNS(
       'http://www.w3.org/2000/svg',
       'text'
     );
     this.labelElement.setAttribute('class', 'annotation-label');
     this.labelElement.setAttribute('text-anchor', 'middle');
     this.rootGroup.appendChild(this.labelElement);
+    // Assemble the structure
+    this.rootGroup.appendChild(this.selectionOutline);
+    this.rootGroup.appendChild(this.shapeElement);
+
+
 
     this.labelBbox = document.createElementNS(
       'http://www.w3.org/2000/svg',

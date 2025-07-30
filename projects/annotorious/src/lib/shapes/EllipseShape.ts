@@ -48,6 +48,7 @@ export class EllipseShape extends BaseShape {
     this.shapeElement.setAttribute('rx', rx.toString());
     this.shapeElement.setAttribute('ry', ry.toString());
 
+    this.updateOutline();
     this.updateHandlePositions();
   }
 
@@ -84,16 +85,12 @@ export class EllipseShape extends BaseShape {
         break;
     }
     this.update({ type: 'ellipse', cx: this.cx, cy: this.cy, rx: this.rx, ry: this.ry });
-    this.updateHandlePositions();
   }
 
   public override moveBy(deltaX: number, deltaY: number): void {
     this.cx += deltaX;
     this.cy += deltaY;
     this.update({ type: 'ellipse', cx: this.cx, cy: this.cy, rx: this.rx, ry: this.ry });
-    if (this.handles && this.handles.length > 0) {
-      this.updateHandlePositions();
-    }
   }
 
   protected override showEditHandles(): void {
