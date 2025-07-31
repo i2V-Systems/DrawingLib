@@ -43,8 +43,8 @@
     </div>
   </div>
 </div>
-
-<lib-annotorious-openseadragon
+<div style="width: 90vw; height: 100vh;">
+  <lib-annotorious-openseadragon
   [imageSource]="dziUrl"
   [theme]="theme"
   [defaultTool]="'polygon'"
@@ -61,3 +61,4 @@
   (labelSelected)="onLabelSelected($event)"
   (contextMenuClicked)="onContextMenuClicked($event)">
 </lib-annotorious-openseadragon>
+</div>

@@ -20,6 +20,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
   private shapes: Map<string, Shape>;
   private selectedId: string | null = null;
   private readonly spatialIndex: SpatialIndex;
+  private suppressEvents = false;
 
   constructor() {
     super();
@@ -28,6 +29,28 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     this.spatialIndex = new SpatialIndex();
   }
 
+
+   /**
+   * Batch update method: applies multiple updates and emits a single event.
+   * The updater can mutate or return a new annotation object.
+   */
+  batchUpdate(
+    id: string,
+    updater: (annotation: Annotation) => Partial<Annotation>,
+  ): void {
+    const current = this.annotations.get(id);
+    if (!current) return;
+    this.suppressEvents = true;
+    let updates: Partial<Annotation> = {};
+    try {
+      updates = updater({ ...current });
+      this.update(id, updates, false); // use new param!
+    } finally {
+      this.suppressEvents = false;
+    }
+    // Emit only one event after all updates
+    this.emit('update', { id });
+  }
 
   /**
  * Load annotations in batch without firing create events for each.
@@ -100,7 +123,9 @@ loadAnnotations(annotationShapes : {annotation : Annotation, shape : Shape}[]): 
   /**
    * Update an existing annotation
    */
-  update(id: string, changes: Partial<Annotation>): void {
+  update(id: string, changes: Partial<Annotation>, emitEvent: boolean = true): void {
+    if(id != this.selectedId)
+      return;
     const current = this.annotations.get(id);
     if (!current) return;
 
@@ -129,13 +154,14 @@ loadAnnotations(annotationShapes : {annotation : Annotation, shape : Shape}[]): 
       } else if (newLabelBbox) {
         this.spatialIndex.insert({ ...newLabelBbox, id: `label-${id}` });
       }
-      const shape = this.shapes.get(id);
-      if (shape) {
-        shape.updateLabel(changes.label);
-      }
+      // const shape = this.shapes.get(id);
+      // if (shape) {
+      //   shape.updateLabel(changes.label);
+      // }
     }
-
-    this.emit('update', { id });
+    if (emitEvent && !this.suppressEvents) {
+      this.emit('update', { id });
+    }
   }
 
   /**

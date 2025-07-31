@@ -6,8 +6,5 @@
   },
   "allowedNonPeerDependencies": [
     "rbush"
-  ],
-  "assets": [
-    "src/lib/styles/annotorious.css"
   ]
 }

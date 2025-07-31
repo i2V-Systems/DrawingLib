@@ -67,7 +67,7 @@ export class EditManager extends EventEmitter {
         this.listeners['shapePointerDown']
       );
 
-      // targetElement.style.cursor = 'move';
+      targetElement.style.cursor = 'move';
     }
   }
 
@@ -95,41 +95,45 @@ export class EditManager extends EventEmitter {
     }
   }
 
-// In EditManager.ts - Replace setupArrowSymbolClick method
-private setupArrowSymbolClick(shape: Shape): void {
-  if (!this.editingShape) return;
-  if (!(this.editingShape instanceof PolylineArrowShape)) return;
+  // In EditManager.ts - Replace setupArrowSymbolClick method
+  private setupArrowSymbolClick(shape: Shape): void {
+    if (!this.editingShape) return;
+    if (!(this.editingShape instanceof PolylineArrowShape)) return;
 
-  // Remove individual listeners, use delegation instead
-  const arrowGroup = this.editingShape.getArrowGroup();
-  
-  const delegatedHandler = (event: MouseEvent) => {
-    if (event.button !== 2) return; // Only handle right-clicks
-    
-    const target = event.target as SVGElement;
-    if (!target.classList.contains('arrow-symbol')) return;
-    
-    event.stopPropagation();
-    event.preventDefault();
-    
-    const startIndex = parseInt(target.getAttribute('data-start-index') || '0');
-    const endIndex = parseInt(target.getAttribute('data-end-index') || '0');
-    const direction = target.getAttribute('data-direction') as 'up' | 'down' | 'both';
-    
-    this.emit('arrowSymbolClicked', {
-      annotationId: this.editingShapeId,
-      startIndex,
-      endIndex,
-      direction,
-      element: target,
-      event
-    } as ArrowClickEvent);
-  };
+    // Remove individual listeners, use delegation instead
+    const arrowGroup = this.editingShape.getArrowGroup();
 
-  arrowGroup?.addEventListener('contextmenu', delegatedHandler);
-  this.listeners['arrowGroupDelegate'] = delegatedHandler;
-}
+    const delegatedHandler = (event: MouseEvent) => {
+      if (event.button !== 2) return; // Only handle right-clicks
 
+      const target = event.target as SVGElement;
+      if (!target.classList.contains('arrow-symbol')) return;
+
+      event.stopPropagation();
+      event.preventDefault();
+
+      const startIndex = parseInt(
+        target.getAttribute('data-start-index') || '0'
+      );
+      const endIndex = parseInt(target.getAttribute('data-end-index') || '0');
+      const direction = target.getAttribute('data-direction') as
+        | 'up'
+        | 'down'
+        | 'both';
+
+      this.emit('arrowSymbolClicked', {
+        annotationId: this.editingShapeId,
+        startIndex,
+        endIndex,
+        direction,
+        element: target,
+        event,
+      } as ArrowClickEvent);
+    };
+
+    arrowGroup?.addEventListener('contextmenu', delegatedHandler);
+    this.listeners['arrowGroupDelegate'] = delegatedHandler;
+  }
 
   stopEditing(): void {
     if (this.editingShape) {
@@ -241,11 +245,7 @@ private setupArrowSymbolClick(shape: Shape): void {
       );
       this.editingShape.moveBy(clampedDelta.deltaX, clampedDelta.deltaY);
       this.dragContext.lastPointerPos = currentPos;
-      this.emit('entityDragged', {
-        id: this.editingShapeId,
-        type: 'shape',
-        delta: { x: clampedDelta.deltaX, y: clampedDelta.deltaY },
-      });
+
     } else if (this.dragContext.type === 'label') {
       const newPosition = { x: currentPos.x, y: currentPos.y };
       (this.editingShape as any).updateLabel({
@@ -253,11 +253,7 @@ private setupArrowSymbolClick(shape: Shape): void {
         ...newPosition,
       });
       this.dragContext.lastPointerPos = currentPos;
-      this.emit('entityDragged', {
-        id: this.editingShapeId,
-        type: 'label',
-        delta: { x: deltaX, y: deltaY },
-      });
+
     } else if (this.dragContext.type === 'handle' && this.dragContext.element) {
       const clampedPos = this.clampPointToSVG(currentPos);
       (this.editingShape as any).updateFromHandle(
@@ -273,8 +269,15 @@ private setupArrowSymbolClick(shape: Shape): void {
   };
 
   private onPointerUp = (event: PointerEvent) => {
-    if (this.dragContext.type) {
-      if (this.dragContext.type === 'label' && this.editingShape) {
+    if (this.editingShape) {
+      const shapeGeometry = this.editingShape.getGeometry();
+      this.emit('updateGeometry', {
+        id: this.editingShapeId,
+        geometry: shapeGeometry,
+        type: 'shape',
+      });
+
+      if (this.dragContext.type && this.dragContext.type === 'label') {
         const labelGeometry = {
           x: parseFloat(
             (this.editingShape as any).labelElement.getAttribute('x')
@@ -285,22 +288,18 @@ private setupArrowSymbolClick(shape: Shape): void {
           text: (this.editingShape as any).labelElement.textContent,
           type: 'text',
         };
-        const shapeGeometry = this.editingShape.getGeometry();
-        this.emit('updateGeometry', {
-          id: this.editingShapeId,
-          geometry: shapeGeometry,
-          type: 'shape',
-        });
+
         this.emit('updateGeometry', {
           id: this.editingShapeId,
           geometry: labelGeometry,
           type: 'label',
         });
       }
-      this.emit('editingDragStopped', {
-        type: this.dragContext.type,
-      });
     }
+
+    this.emit('editingDragStopped', {
+      type: this.dragContext.type,
+    });
     this.dragContext = { type: null };
   };
 
@@ -353,8 +352,16 @@ private setupArrowSymbolClick(shape: Shape): void {
     return this.editingShapeId === id;
   }
 
-  public changeArrowDirection(startIndex : number, endIndex : number, direction :'up' | 'down' | 'both'): void {
-    (this.editingShape as PolylineArrowShape).setArrowDirection(startIndex, endIndex, direction);
+  public changeArrowDirection(
+    startIndex: number,
+    endIndex: number,
+    direction: 'up' | 'down' | 'both'
+  ): void {
+    (this.editingShape as PolylineArrowShape).setArrowDirection(
+      startIndex,
+      endIndex,
+      direction
+    );
     this.emit('updateGeometry', {
       id: this.editingShapeId,
       geometry: (this.editingShape as PolylineArrowShape).getGeometry(),

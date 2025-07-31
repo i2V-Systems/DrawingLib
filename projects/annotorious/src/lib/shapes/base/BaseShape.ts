@@ -33,6 +33,7 @@ export abstract class BaseShape
     super();
     this.id = id;
     this.shapeElement = shapeElement;
+    this.shapeElement.style.pointerEvents = 'stroke';
     this.rootGroup = document.createElementNS(
       'http://www.w3.org/2000/svg',
       'g'
@@ -58,18 +59,17 @@ export abstract class BaseShape
     this.handlesGroup.setAttribute('class', 'a9s-handles-group');
     this.handlesGroup.style.display = 'none';
 
-        this.labelElement = document.createElementNS(
+    this.labelElement = document.createElementNS(
       'http://www.w3.org/2000/svg',
       'text'
     );
     this.labelElement.setAttribute('class', 'annotation-label');
     this.labelElement.setAttribute('text-anchor', 'middle');
+    this.labelElement.style.cursor = 'default';
     this.rootGroup.appendChild(this.labelElement);
     // Assemble the structure
     this.rootGroup.appendChild(this.selectionOutline);
     this.rootGroup.appendChild(this.shapeElement);
-
-
 
     this.labelBbox = document.createElementNS(
       'http://www.w3.org/2000/svg',
@@ -134,6 +134,8 @@ export abstract class BaseShape
       this.selected = selected;
       if (selected) {
         this.selectionOutline.style.display = '';
+        this.labelElement.style.fill = 'black';
+        this.labelBbox.style.fill = 'white';
         if (this.currentStyle) {
           this.selectionOutline.style.stroke =
             this.currentStyle.selectionOutlineColor;
@@ -145,6 +147,8 @@ export abstract class BaseShape
         this.showEditHandles();
       } else {
         this.selectionOutline.style.display = 'none';
+        this.labelElement.style.fill = this.currentStyle?.labelTextFill || 'white';
+        this.labelBbox.style.fill = this.currentStyle?.stroke || 'black';
         this.hideEditHandles();
       }
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
@@ -275,6 +279,7 @@ export abstract class BaseShape
 
   disableEditing(): void {
     this.shapeElement.classList.remove('editing');
+    this.labelElement.style.cursor = 'default';
     this.hideEditHandles();
   }
 
@@ -325,45 +330,15 @@ export abstract class BaseShape
     }
   }
 
-  
-  /**
-   * Set label with automatic positioning
-   */
-  setLabel(text: string, position?: Point): void {
-    let labelPosition = position;
-    
-    if (!labelPosition) {
-      // Auto-calculate position based on shape
-      labelPosition = this.getDefaultLabelPosition();
-    }
-
-    const labelGeometry: TextGeometry = {
-      type: 'text',
-      text,
-      x: labelPosition.x,
-      y: labelPosition.y
-    };
-
-    this.updateLabel(labelGeometry);
-    this.emit('labelUpdated', { id: this.id, label: labelGeometry });
-  }
-
-  /**
-   * Get default label position for this shape type
-   */
-  protected getDefaultLabelPosition(): Point {
-    const bbox = this.getBBox();
-    return {
-      x: bbox.x + bbox.width / 2,
-      y: bbox.y - 10
-    };
-  }
 
   /**
    * Check if shape has a label
    */
   hasLabel(): boolean {
-    return this.labelElement.textContent !== null && this.labelElement.textContent.trim() !== '';
+    return (
+      this.labelElement.textContent !== null &&
+      this.labelElement.textContent.trim() !== ''
+    );
   }
 
   /**

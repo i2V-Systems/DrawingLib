@@ -24,6 +24,7 @@ import {
 @Component({
   selector: 'lib-annotorious-openseadragon',
   templateUrl: './annotorious-openseadragon.component.html',
+  styleUrls: ['./annotorious-openseadragon.component.scss', './../styles/annotorious.css']
 })
 export class AnnotoriousOpenseadragonComponent
   implements OnInit, OnDestroy, AfterViewInit
@@ -50,9 +51,6 @@ export class AnnotoriousOpenseadragonComponent
     | 'freehand'
     | 'text' = 'rectangle';
 
-  @Input() labelText: string = '';
-  @Input() strokeColor: string = '#FF0000';
-  @Input() strokeWidth: number = 2;
 
   @Output() annotationCreated = new EventEmitter<AnnotationEvent>();
   @Output() annotationUpdated = new EventEmitter<AnnotationEvent>();
@@ -88,6 +86,7 @@ export class AnnotoriousOpenseadragonComponent
 
   ngAfterViewInit() {
     this.viewer.addHandler('open', () => {
+      this.updateViewerSize();
       this.ngZone.runOutsideAngular(() => {
         this.annotator = new OpenSeadragonAnnotator({
           viewer: this.viewer,
@@ -98,10 +97,6 @@ export class AnnotoriousOpenseadragonComponent
         this.annotator.on('create', (evt: any) => {
           this.ngZone.run(() => {
             this.annotationCreated.emit(evt);
-            this.annotator.setAnnotationStyle(evt.id, {
-              stroke: this.strokeColor,
-              strokeWidth: this.strokeWidth} as Partial<ShapeStyle>);
-            this.annotator.setLabel(evt.id, this.labelText);
           });
         });
 
@@ -156,6 +151,9 @@ export class AnnotoriousOpenseadragonComponent
         }, 100);
       });
     });
+
+  window.addEventListener('resize', this.updateViewerSize.bind(this));
+  document.addEventListener('DOMContentLoaded', this.updateViewerSize.bind(this));
   }
 
   ngOnInit() {
@@ -190,6 +188,21 @@ export class AnnotoriousOpenseadragonComponent
     });
   }
 
+  updateViewerSize = () => {
+  const viewerElement = document.getElementById(this.viewerId);
+  if (!viewerElement) return;
+
+  const parentHeight = viewerElement.parentElement?.clientHeight || window.innerHeight;
+  const imgWidth = 640; // Update with dynamic width if needed
+  const imgHeight = 480;
+  const aspectRatio = imgWidth / imgHeight;
+  const calculatedWidth = parentHeight * aspectRatio;
+
+  viewerElement.style.height = '100%';
+  viewerElement.style.width = `${calculatedWidth}px`;
+};
+
+
   ngOnDestroy() {
     // Clean up
     if (this.annotator) {
@@ -210,10 +223,14 @@ export class AnnotoriousOpenseadragonComponent
       : null;
   }
 
-  activateTool(tool: string): void {
+  activateTool(tool: string, stroke? : string, strokeWidth? : number, labelText? : string): void {
     this.ngZone.run(() => {
       if (this.annotator) {
         this.annotator.activateTool(tool);
+        if(labelText || stroke || strokeWidth){
+          this.annotator.pendingLabelText = labelText;
+          this.annotator.pendingStyle = {stroke : stroke, strokeWidth : strokeWidth} as ShapeStyle;
+        }
         this.activeTool = tool;
         this.cdr.detectChanges();
       }

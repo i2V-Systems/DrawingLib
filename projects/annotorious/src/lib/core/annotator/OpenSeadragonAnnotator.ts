@@ -33,6 +33,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly toolManager: ToolManager;
   private readonly editManager: EditManager;
   private readonly crosshair?: Crosshair;
+  public pendingStyle?: ShapeStyle;
+  public pendingLabelText?: string;
 
   constructor(config: OpenSeadragonAnnotatorConfig) {
     super();
@@ -91,17 +93,21 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       const annotation = this.state.getAnnotation(id);
       if (annotation) {
         if (type === 'label') {
-          this.updateAnnotation(id, { label: geometry as TextGeometry });
+          this.state.update(id, { label: geometry as TextGeometry }, false);
         } else {
-          this.updateAnnotation(id, {
-            target: {
-              ...annotation.target,
-              selector: {
-                ...annotation.target.selector,
-                geometry,
+          this.state.update(
+            id,
+            {
+              target: {
+                ...annotation.target,
+                selector: {
+                  ...annotation.target.selector,
+                  geometry,
+                },
               },
             },
-          });
+            false
+          );
         }
       }
     });
@@ -116,6 +122,15 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     }
 
     // Bind manager events
+    this.state.on('loaded', () => {
+      const annotations = this.state.getAll();
+      for (const annotation of annotations) {
+        if (annotation.style) {
+          this.styleManager.setCustomStyle(annotation.id, annotation.style);
+        }
+      }
+      this.redrawAll();
+    });
     this.state.on('create', (event: { id: string }) => {
       const annotation = this.state.getAnnotation(event.id);
       if (annotation) this.onAnnotationCreated(annotation);
@@ -170,6 +185,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
           const geometry = this.svgOverlay.convertSvgGeometryToImage(
             shape.getGeometry()
           );
+          const label = this.pendingLabelText
+            ? ({ text: this.pendingLabelText, type: 'text' } as TextGeometry)
+            : undefined;
           const shapeAnnotation: Annotation = {
             id: crypto.randomUUID(),
             type: 'Annotation',
@@ -181,6 +199,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
                 geometry,
               },
             },
+            label: label,
+            style: this.pendingStyle,
           };
 
           this.addAnnotation(shapeAnnotation);
@@ -218,20 +238,16 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.styleManager.setCurrentZoom(currentZoom);
 
     // Update all shapes with new zoom-adjusted styles
-    this.updateAllShapeStyles();
+    this.updateZoomDependentShapeStyles();
   }
 
-  private updateAllShapeStyles(): void {
-    const annotations = this.state.getAll();
-
-    for (const annotation of annotations) {
-      const shape = this.state.getShape(annotation.id);
-      if (shape) {
-        // Get updated style from StyleManager (includes zoom adjustments)
-        const style = this.styleManager.getStyle(annotation.id);
-
-        // Apply the style to the shape
-        shape.applyStyle(style);
+  private updateZoomDependentShapeStyles(): void {
+    if (this.editManager.isEditing()) {
+      const editingEntity = this.editManager.getCurrentEditingEntity();
+      if (editingEntity) {
+        const style = this.styleManager.getStyle(editingEntity.id);
+        const shape = this.state.getShape(editingEntity.id);
+        shape?.applyStyle(style);
       }
     }
   }
@@ -282,39 +298,24 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     while (overlayNode.firstChild) {
       overlayNode.removeChild(overlayNode.firstChild);
     }
-
     const annotations = this.state.getAll();
     for (const annotation of annotations) {
       const id = annotation.id!;
       let shape = (this.state as any).shapes?.get?.(id);
-
-      // Don't overwrite geometry for currently editing shape, but still update styles
-      if (this.editManager.isEditingEntity(id)) {
-        // Re-append the existing shape element (preserves current geometry state)
-        if (shape) {
-          overlayNode.appendChild(shape.getElement());
-
-          // Apply updated styles to the editing shape
-          const style = this.styleManager.getStyle(id);
-          shape.applyStyle(style);
-        }
+      const geometry = annotation.target.selector.geometry;
+      if (!shape) {
+        shape = ShapeFactory.createFromGeometry(id, geometry);
+        (this.state as any).shapes?.set?.(id, shape);
       } else {
-        // Normal redraw logic for non-editing shapes
-        const geometry = annotation.target.selector.geometry;
-        if (!shape) {
-          shape = ShapeFactory.createFromGeometry(id, geometry);
-          (this.state as any).shapes?.set?.(id, shape);
-        } else {
-          shape.update(geometry);
-        }
-
-        const svgElement = shape.getElement();
-        overlayNode.appendChild(svgElement);
-
-        // Apply styles to non-editing shapes
-        const style = this.styleManager.getStyle(id);
-        shape.applyStyle(style);
+        shape.update(geometry);
       }
+
+      const svgElement = shape.getElement();
+      overlayNode.appendChild(svgElement);
+
+      // Apply styles to non-editing shapes
+      const style = this.styleManager.getStyle(id);
+      shape.applyStyle(style);
     }
   }
 
@@ -336,15 +337,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
         return { annotation, shape };
       })
     );
-
-    // Apply styles to loaded annotations
-    for (const annotation of annotations) {
-      if (annotation.style) {
-        this.styleManager.setCustomStyle(annotation.id, annotation.style);
-      }
-    }
-
-    this.redrawAll();
   }
   // Update addAnnotation to remove svgOverlay parameter
   addAnnotation(annotation: Annotation): void {
@@ -442,7 +434,10 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
   setAnnotationStyle(id: string, style: Partial<ShapeStyle>): void {
     this.styleManager.setCustomStyle(id, style);
-    this.redrawAll();
+    const updatedStyle = this.styleManager.getStyle(id);
+    this.state.update(id, { style: updatedStyle }, false);
+    const shape = this.state.getShape(id);
+    shape?.applyStyle(updatedStyle);
   }
 
   changeArrowDirection(
@@ -548,11 +543,12 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     };
 
     // Update annotation with label
-    this.updateAnnotation(annotationId, {
+    this.state.update(annotationId, {
       label: labelGeometry,
-    });
-
-    this.emit('labelSet', { annotationId, label: labelGeometry });
+    }, false);
+    shape.updateLabel(labelGeometry);
+    const style = this.styleManager.getStyle(annotationId)
+    shape.applyStyle(style);
   }
 
   /**
@@ -575,48 +571,48 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   /**
- * Save changes made to the currently selected/editing shape
- */
-public saveSelectedShapeChanges(): boolean {
-  const currentEntity = this.editManager.getCurrentEditingEntity();
-  if (!currentEntity) {
-    console.warn('No shape is currently selected for editing');
-    return false;
-  }
-  
-  return this.saveShapeChanges(currentEntity.id);
-}
+   * Save changes made to the currently selected/editing shape
+   */
+  public saveSelectedShapeChanges(): boolean {
+    const currentEntity = this.editManager.getCurrentEditingEntity();
+    if (!currentEntity) {
+      console.warn('No shape is currently selected for editing');
+      return false;
+    }
 
-/**
- * Save changes for a specific shape
- */
-public saveShapeChanges(annotationId: string): boolean {
-  const shape = this.state.getShape(annotationId);
-  if (!shape) {
-    console.warn(`Shape with ID ${annotationId} not found`);
-    return false;
+    return this.saveShapeChanges(currentEntity.id);
   }
 
-  try {
-    // Get current geometry from the shape
-    const currentGeometry = shape.getGeometry();
-    
-    // Update the annotation data with current shape state
-    this.updateAnnotation(annotationId, {
-      target: {
-        selector: {
-          type: 'SvgSelector',
-          geometry: currentGeometry
-        }
-      }
-    });
+  /**
+   * Save changes for a specific shape
+   */
+  public saveShapeChanges(annotationId: string): boolean {
+    const shape = this.state.getShape(annotationId);
+    if (!shape) {
+      console.warn(`Shape with ID ${annotationId} not found`);
+      return false;
+    }
 
-    return true;
-  } catch (error) {
-    console.error('Failed to save shape changes:', error);
-    return false;
+    try {
+      // Get current geometry from the shape
+      const currentGeometry = shape.getGeometry();
+
+      // Update the annotation data with current shape state
+      this.updateAnnotation(annotationId, {
+        target: {
+          selector: {
+            type: 'SvgSelector',
+            geometry: currentGeometry,
+          },
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to save shape changes:', error);
+      return false;
+    }
   }
-}
 
   private onAnnotationCreated(annotation: Annotation): void {
     this.emit('create', annotation);
@@ -635,10 +631,19 @@ public saveShapeChanges(annotationId: string): boolean {
     const shape = this.state.getShape(annotation.id);
     if (shape) {
       shape.setSelected(true);
-      this.editManager.startEditing(annotation.id, shape);
-    }
 
-    this.emit('select', annotation);
+      // ==== Z-ORDER: Move selected shape to top ====
+      const overlayNode = this.svgOverlay.node();
+      const shapeElement = shape.getElement();
+      // Remove and re-append to bring to top
+      if (shapeElement.parentNode === overlayNode) {
+        overlayNode.removeChild(shapeElement);
+        overlayNode.appendChild(shapeElement);
+      }
+      this.editManager.startEditing(annotation.id, shape);
+
+      this.emit('select', annotation);
+    }
   }
 
   private onAnnotationDeselected(annotation: Annotation): void {
@@ -646,8 +651,8 @@ public saveShapeChanges(annotationId: string): boolean {
     if (shape) {
       shape.setSelected(false);
     }
-
     this.editManager.stopEditing();
+    this.emit('update', annotation);
     this.emit('deselect', annotation);
   }
 }
