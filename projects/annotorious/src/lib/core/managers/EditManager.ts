@@ -103,7 +103,7 @@ export class EditManager extends EventEmitter {
     // Remove individual listeners, use delegation instead
     const arrowGroup = this.editingShape.getArrowGroup();
 
-    const delegatedHandler = (event: MouseEvent) => {
+    const delegatedHandler = (event: PointerEvent) => {
       if (event.button !== 2) return; // Only handle right-clicks
 
       const target = event.target as SVGElement;
@@ -131,7 +131,7 @@ export class EditManager extends EventEmitter {
       } as ArrowClickEvent);
     };
 
-    arrowGroup?.addEventListener('contextmenu', delegatedHandler);
+    arrowGroup?.addEventListener('contextmenu', delegatedHandler as any);
     this.listeners['arrowGroupDelegate'] = delegatedHandler;
   }
 
@@ -179,6 +179,13 @@ export class EditManager extends EventEmitter {
         }
       });
 
+      if (this.editingShape instanceof PolylineArrowShape && this.listeners['arrowGroupDelegate']) {
+      const arrowGroup = this.editingShape.getArrowGroup();
+      if (arrowGroup) {
+        arrowGroup.removeEventListener('contextmenu', this.listeners['arrowGroupDelegate'] as any);
+      }
+      delete this.listeners['arrowGroupDelegate'];
+    }
     }
 
     this.editingShape = null;

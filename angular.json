@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "@i2v-systems/annotorious": {
+    "@i2v-systems/drawinglib": {
       "projectType": "library",
       "root": "projects/annotorious",
       "sourceRoot": "projects/annotorious/src",

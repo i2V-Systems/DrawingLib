@@ -360,31 +360,6 @@ export class AnnotoriousOpenseadragonComponent
     });
   }
 
-  /**
- * Set visibility of an annotation
- */
-setAnnotationVisible(annotationId: string, visible: boolean): void {
-  this.ngZone.run(() => {
-    if (this.annotator) {
-      this.annotator.setAnnotationVisible(annotationId, visible);
-      this.cdr.detectChanges();
-    }
-  });
-}
-
-/**
- * Hide an annotation
- */
-hideAnnotation(annotationId: string): void {
-  this.setAnnotationVisible(annotationId, false);
-}
-
-/**
- * Show an annotation
- */
-showAnnotation(annotationId: string): void {
-  this.setAnnotationVisible(annotationId, true);
-}
 
 /**
  * Hide multiple annotations

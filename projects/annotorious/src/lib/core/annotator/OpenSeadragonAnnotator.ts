@@ -503,37 +503,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.crosshair?.isEnabled() || false;
   }
 
-  // In OpenSeadragonAnnotator.ts - add these methods
-
-/**
- * Set visibility of an annotation by ID
- */
-setAnnotationVisible(id: string, visible: boolean): void {
-  this.state.setAnnotationVisible(id, visible);
-  this.redrawAll(); // Redraw to apply visibility changes
-}
-
-/**
- * Hide an annotation by ID
- */
-hideAnnotation(id: string): void {
-  // Check if we're trying to hide the currently editing shape
-  if (this.editManager.isEditingEntity(id)) {
-    // Stop editing first to clean up all listeners and state
-    this.editManager.stopEditing();
-    this.state.deselectAll();
-  }
-
-  this.setAnnotationVisible(id, false);
-}
-
-/**
- * Show an annotation by ID
- */
-showAnnotation(id: string): void {
-  this.setAnnotationVisible(id, true);
-}
-
 /**
  * Check if an annotation is visible
  */
