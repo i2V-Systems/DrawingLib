@@ -15,13 +15,11 @@ export class EllipseTool extends Tool {
   private isRotating = false;
   private onComplete: (shape: EllipseShape) => void;
   private minSize = 4;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: EllipseShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -35,7 +33,7 @@ export class EllipseTool extends Tool {
 
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (!this.currentShape) {
         this.startDrawing(clamped);
       } else if (event.shiftKey) {
@@ -46,7 +44,7 @@ export class EllipseTool extends Tool {
 
   override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (this.isRotating) {
         // Rotation is not supported yet
         
@@ -79,7 +77,7 @@ export class EllipseTool extends Tool {
 
   override handleMouseUp(point: Point, _event: PointerEvent): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (this.isRotating) {
         this.isRotating = false;
       } else {

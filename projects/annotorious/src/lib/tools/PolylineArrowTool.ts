@@ -12,17 +12,15 @@ export class PolylineArrowTool extends Tool {
   private isCurrentlyDrawing = false;
   private onComplete: (shape: PolylineArrowShape) => void;
   private minPoints = 2; // Polylines need minimum 2 points
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(
     svg: SVGSVGElement, 
     onComplete: (shape: PolylineArrowShape) => void, 
     imageBounds: { naturalWidth: number, naturalHeight: number }
   ) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -35,7 +33,7 @@ export class PolylineArrowTool extends Tool {
 
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (!this.isCurrentlyDrawing) {
         this.startDrawing(clamped);
       } else {
@@ -46,7 +44,7 @@ export class PolylineArrowTool extends Tool {
 
   override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.isCurrentlyDrawing && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       const points = [...this.points, clamped];
       
       // Create default arrows for preview (one for each segment)
@@ -120,7 +118,7 @@ export class PolylineArrowTool extends Tool {
       
       // Clamp all points to image bounds
       this.points = this.points.map(p => 
-        (this.constructor as typeof Tool).clampToImageBounds(p, this.imageBounds)
+        (this.constructor as typeof Tool).clampToImageBounds(p, Tool.imageBounds)
       );
       
       // Create default arrows for all segments

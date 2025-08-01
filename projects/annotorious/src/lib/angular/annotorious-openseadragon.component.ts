@@ -20,6 +20,7 @@ import {
   darkTheme,
   ShapeStyle,
 } from '../core/managers/StyleManager';
+import { Tool } from '../tools';
 
 @Component({
   selector: 'lib-annotorious-openseadragon',
@@ -152,7 +153,7 @@ export class AnnotoriousOpenseadragonComponent
       });
     });
 
-  window.addEventListener('resize', this.updateViewerSize.bind(this));
+  this.viewer.addHandler('resize', this.updateViewerSize.bind(this));
   document.addEventListener('DOMContentLoaded', this.updateViewerSize.bind(this));
   }
 
@@ -200,6 +201,13 @@ export class AnnotoriousOpenseadragonComponent
 
   viewerElement.style.height = '100%';
   viewerElement.style.width = `${calculatedWidth}px`;
+
+  if (this.annotator) {
+    this.annotator.resizeSvgOverlay();
+
+    const newBounds =  this.annotator.getSvgOverlay().getContainerSize();
+    Tool.setContainerBound(newBounds);
+  }
 };
 
 
@@ -211,6 +219,9 @@ export class AnnotoriousOpenseadragonComponent
     if (this.viewer) {
       this.viewer.destroy();
     }
+
+  window.removeEventListener('resize', this.updateViewerSize);
+  document.removeEventListener('DOMContentLoaded', this.updateViewerSize);
   }
 
   getAnnotations(): any[] {
@@ -348,6 +359,63 @@ export class AnnotoriousOpenseadragonComponent
       return false;
     });
   }
+
+  /**
+ * Set visibility of an annotation
+ */
+setAnnotationVisible(annotationId: string, visible: boolean): void {
+  this.ngZone.run(() => {
+    if (this.annotator) {
+      this.annotator.setAnnotationVisible(annotationId, visible);
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+/**
+ * Hide an annotation
+ */
+hideAnnotation(annotationId: string): void {
+  this.setAnnotationVisible(annotationId, false);
+}
+
+/**
+ * Show an annotation
+ */
+showAnnotation(annotationId: string): void {
+  this.setAnnotationVisible(annotationId, true);
+}
+
+/**
+ * Hide multiple annotations
+ */
+hideAnnotations(annotationIds: string[]): void {
+  this.ngZone.run(() => {
+    if (this.annotator) {
+      this.annotator.hideAnnotations(annotationIds);
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+/**
+ * Show multiple annotations
+ */
+showAnnotations(annotationIds: string[]): void {
+  this.ngZone.run(() => {
+    if (this.annotator) {
+      this.annotator.showAnnotations(annotationIds);
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+/**
+ * Check if annotation is visible
+ */
+isAnnotationVisible(annotationId: string): boolean {
+  return this.annotator ? this.annotator.isAnnotationVisible(annotationId) : false;
+}
 
   getAllAvailableTools(): string[] {
     // Synchronous getter - no zone management needed

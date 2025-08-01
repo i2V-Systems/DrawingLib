@@ -13,6 +13,7 @@ import { SvgOverlay, SvgOverlayInfo } from './SvgOverlay';
 import { EditManager } from '../managers/EditManager';
 import { convertToViewportCoordinates } from '../../utils/SVGUtils';
 import { TextGeometry } from '../../types';
+import { KeyboardManager } from '../managers';
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -32,6 +33,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly styleManager: StyleManager;
   private readonly toolManager: ToolManager;
   private readonly editManager: EditManager;
+  private keyboardManager: KeyboardManager;
   private readonly crosshair?: Crosshair;
   public pendingStyle?: ShapeStyle;
   public pendingLabelText?: string;
@@ -78,6 +80,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state = new AnnotationState();
     this.editManager = new EditManager(this.svgOverlay);
     this.toolManager = new ToolManager(this.svgOverlay);
+    this.keyboardManager = new KeyboardManager();
 
     // Listen for zoom changes and update StyleManager
     this.viewer.addHandler('zoom', () => {
@@ -86,6 +89,24 @@ export class OpenSeadragonAnnotator extends EventEmitter {
 
     this.viewer.addHandler('animation-finish', () => {
       this.handleZoomChange();
+    });
+
+
+    // Example shortcut: Delete selected shape
+    this.keyboardManager.addBinding({
+      key: 'Delete',
+      action: () => {
+        const selectedId = this.state.getSelectedId();
+        if (selectedId) this.removeAnnotation(selectedId);
+      }
+    });
+
+
+    this.keyboardManager.addBinding({
+      key: 'Escape',
+      action: () => {
+        this.clearSelectionAndEditing();
+      }
     });
 
     // Listen for geometry updates from EditManager
@@ -141,9 +162,8 @@ export class OpenSeadragonAnnotator extends EventEmitter {
       if (annotation) this.onAnnotationUpdated(annotation);
     });
 
-    this.state.on('delete', (event: { id: string }) => {
-      const annotation = this.state.getAnnotation(event.id);
-      if (annotation) this.onAnnotationDeleted(annotation);
+    this.state.on('delete', (event: { annotation: Annotation }) => {
+      this.onAnnotationDeleted(event.annotation);
     });
 
     this.state.on('select', (event: { id: string }) => {
@@ -168,9 +188,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     });
 
     // Get image natural width and height
-    const item = this.viewer.viewport.getContainerSize();
-    const { x: naturalWidth, y: naturalHeight } = item;
-    const imageBounds = { naturalWidth, naturalHeight };
+    const containerBounds = this.svgOverlay.getContainerSize();
 
     // Register tools
     const tools = createTools(
@@ -207,7 +225,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
           this.toolManager.deactivateActiveTool();
         }
       },
-      imageBounds
+      containerBounds
     );
 
     tools.forEach((tool) => this.toolManager.registerTool(tool));
@@ -301,6 +319,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     const annotations = this.state.getAll();
     for (const annotation of annotations) {
       const id = annotation.id!;
+      if (!this.state.isAnnotationVisible(id)) {
+        continue;
+      }
       let shape = (this.state as any).shapes?.get?.(id);
       const geometry = annotation.target.selector.geometry;
       if (!shape) {
@@ -482,6 +503,81 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.crosshair?.isEnabled() || false;
   }
 
+  // In OpenSeadragonAnnotator.ts - add these methods
+
+/**
+ * Set visibility of an annotation by ID
+ */
+setAnnotationVisible(id: string, visible: boolean): void {
+  this.state.setAnnotationVisible(id, visible);
+  this.redrawAll(); // Redraw to apply visibility changes
+}
+
+/**
+ * Hide an annotation by ID
+ */
+hideAnnotation(id: string): void {
+  // Check if we're trying to hide the currently editing shape
+  if (this.editManager.isEditingEntity(id)) {
+    // Stop editing first to clean up all listeners and state
+    this.editManager.stopEditing();
+    this.state.deselectAll();
+  }
+
+  this.setAnnotationVisible(id, false);
+}
+
+/**
+ * Show an annotation by ID
+ */
+showAnnotation(id: string): void {
+  this.setAnnotationVisible(id, true);
+}
+
+/**
+ * Check if an annotation is visible
+ */
+isAnnotationVisible(id: string): boolean {
+  return this.state.isAnnotationVisible(id);
+}
+
+/**
+ * Hide multiple annotations by IDs
+ */
+hideAnnotations(ids: string[]): void {
+  // Check if any of the IDs being hidden are currently being edited
+  const currentEditingId = this.editManager.getCurrentEditingEntity()?.id;
+  if (currentEditingId && ids.includes(currentEditingId)) {
+    this.editManager.stopEditing();
+    this.state.deselectAll();
+  }
+
+  ids.forEach(id => this.state.setAnnotationVisible(id, false));
+  this.redrawAll(); // Single redraw for all changes
+}
+
+/**
+ * Show multiple annotations by IDs  
+ */
+showAnnotations(ids: string[]): void {
+  ids.forEach(id => this.state.setAnnotationVisible(id, true));
+  this.redrawAll(); // Single redraw for all changes
+}
+
+/**
+ * Get all hidden annotation IDs
+ */
+getHiddenAnnotationIds(): string[] {
+  return this.state.getHiddenAnnotationIds();
+}
+
+/**
+ * Get all visible annotation IDs
+ */
+getVisibleAnnotationIds(): string[] {
+  return this.state.getVisibleAnnotationIds();
+}
+
   /**
    * Get the SVG overlay instance for external use
    */
@@ -500,7 +596,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     // Clean up managers
     this.toolManager.destroy();
     this.crosshair?.destroy();
-
+    this.keyboardManager.destroy();
+    this.styleManager.destroy();
+    this.editManager.destroy();
     // Destroy SVG overlay
     this.svgOverlay.destroy();
 

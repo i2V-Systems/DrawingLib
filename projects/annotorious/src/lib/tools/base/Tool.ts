@@ -18,6 +18,7 @@ export interface ToolCapabilities {
  * Base abstract class for all annotation tools
  */
 export abstract class Tool extends EventEmitter {
+  static imageBounds: { naturalWidth: number; naturalHeight: number };
   /**
    * Unique name of the tool
    */
@@ -28,7 +29,8 @@ export abstract class Tool extends EventEmitter {
    */
   capabilities?: ToolCapabilities;
 
-  constructor() {
+  constructor(imageBounds: { naturalWidth: number; naturalHeight: number }) {
+    Tool.imageBounds = imageBounds;
     super();
   }
 
@@ -75,10 +77,20 @@ export abstract class Tool extends EventEmitter {
   /**
    * Clamp a point to image bounds (utility for all tools)
    */
-  protected static clampToImageBounds(point: Point, bounds: { naturalWidth: number, naturalHeight: number }): Point {
+  protected static clampToImageBounds(
+    point: Point,
+    bounds: { naturalWidth: number; naturalHeight: number }
+  ): Point {
     return {
       x: Math.max(0, Math.min(point.x, bounds.naturalWidth)),
-      y: Math.max(0, Math.min(point.y, bounds.naturalHeight))
+      y: Math.max(0, Math.min(point.y, bounds.naturalHeight)),
     };
+  }
+
+  public static setContainerBound(bounds: {
+    naturalWidth: number;
+    naturalHeight: number;
+  }): void {
+    Tool.imageBounds = bounds;
   }
 }

@@ -13,13 +13,11 @@ export class RectangleTool extends Tool {
   private currentShape: RectangleShape | null = null;
   private startPoint: Point | null = null;
   private onComplete: (shape: RectangleShape) => void;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: RectangleShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -33,7 +31,7 @@ export class RectangleTool extends Tool {
 
   override handleMouseDown(point: Point, _event: PointerEvent): void {
     if (_event.button === 0) { // Left click only
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       this.startPoint = clamped;
       
       // Create initial shape
@@ -58,7 +56,7 @@ export class RectangleTool extends Tool {
 
   override handleMouseMove(point: Point): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       // Calculate rectangle dimensions
       const x = Math.min(this.startPoint.x, clamped.x);
       const y = Math.min(this.startPoint.y, clamped.y);
@@ -72,7 +70,7 @@ export class RectangleTool extends Tool {
 
   override handleMouseUp(point: Point): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       // Only complete if the rectangle has some size
       if (Math.abs(clamped.x - this.startPoint.x) > 2 && 
           Math.abs(clamped.y - this.startPoint.y) > 2) {

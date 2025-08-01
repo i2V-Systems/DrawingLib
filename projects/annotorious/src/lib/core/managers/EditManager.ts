@@ -179,10 +179,6 @@ export class EditManager extends EventEmitter {
         }
       });
 
-      this.emit('editingStopped', {
-        id: this.editingShapeId,
-        type: 'shape',
-      });
     }
 
     this.editingShape = null;
@@ -260,11 +256,6 @@ export class EditManager extends EventEmitter {
         this.dragContext.element,
         clampedPos
       );
-      this.emit('handleDragged', {
-        id: this.editingShapeId,
-        handleElement: this.dragContext.element,
-        position: clampedPos,
-      });
     }
   };
 
@@ -351,6 +342,12 @@ export class EditManager extends EventEmitter {
   isEditingEntity(id: string): boolean {
     return this.editingShapeId === id;
   }
+
+  destroy(): void {
+  this.stopEditing();
+  this.removeAllListeners();
+}
+
 
   public changeArrowDirection(
     startIndex: number,

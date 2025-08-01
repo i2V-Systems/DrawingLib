@@ -11,13 +11,11 @@ export class PointTool extends Tool {
   
   private svg: SVGSVGElement;
   private onComplete: (shape: PointShape) => void;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: PointShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -31,7 +29,7 @@ export class PointTool extends Tool {
 
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       // Create point shape immediately on click
       const pointShape = ShapeFactory.createDefault(
         crypto.randomUUID(),

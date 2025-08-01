@@ -15,13 +15,12 @@ export class FreehandTool extends Tool {
   private points: Point[] = [];
   private onComplete: (shape: PolygonShape) => void;
   private pathElement: SVGPathElement | null = null;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: PolygonShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
+
   }
 
   override activate(): void {
@@ -38,7 +37,7 @@ export class FreehandTool extends Tool {
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
       this.isCurrentlyDrawing = true;
-      this.points = [(this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds)];
+      this.points = [(this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds)];
       
       // Create path element for visual feedback
       this.pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -56,7 +55,7 @@ export class FreehandTool extends Tool {
     if (this.isCurrentlyDrawing && this.pathElement) {
       // Add point if it's far enough from the last point
       const lastPoint = this.points[this.points.length - 1];
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       const distance = Math.sqrt((clamped.x - lastPoint.x) ** 2 + (clamped.y - lastPoint.y) ** 2);
       
       if (distance > 2) { // Minimum distance threshold

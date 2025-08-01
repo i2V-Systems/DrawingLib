@@ -35,6 +35,7 @@ export interface SvgOverlayInfo {
   svgToImage(svgX: number, svgY: number): { x: number; y: number };
   convertSvgGeometryToImage(geometry: Geometry): Geometry;
   getImageFitInfo(): ImageFitInfo;
+  getContainerSize() : {naturalWidth : number, naturalHeight : number};
 }
 
 /**
@@ -106,6 +107,13 @@ export class SvgOverlay implements SvgOverlayInfo {
   getImageFitInfo(): ImageFitInfo {
     const containerSize = this._viewer.viewport.getContainerSize();
     return this._calculateImageFit(containerSize);
+  }
+
+  getContainerSize(): {naturalWidth : number, naturalHeight : number} {
+    const item = this._viewer.viewport.getContainerSize();
+    const { x: naturalWidth, y: naturalHeight } = item;
+    const containerBounds = { naturalWidth, naturalHeight };
+    return containerBounds;
   }
 
   private _calculateTransform(): string {

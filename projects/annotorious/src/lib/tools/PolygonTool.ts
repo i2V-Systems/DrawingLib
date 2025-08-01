@@ -17,13 +17,11 @@ export class PolygonTool extends Tool {
   private minPoints = 3;
   private snapDistance = 20;
   private doubleClickTimeout: number | null = null;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: PolygonShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -38,7 +36,7 @@ export class PolygonTool extends Tool {
 
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (!this.isCurrentlyDrawing) {
         this.startDrawing(clamped);
       } else {
@@ -50,7 +48,7 @@ export class PolygonTool extends Tool {
   override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.isCurrentlyDrawing && this.currentShape) {
       // Update the last point (preview line)
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       const points = [...this.points, clamped];
       this.currentShape.update({ type: 'polygon', points });
 
@@ -124,7 +122,7 @@ export class PolygonTool extends Tool {
         new Map(this.points.map(p => [`${p.x},${p.y}`, p])).values()
       );
       // Clamp all points to image bounds before finalizing
-      this.points = this.points.map(p => (this.constructor as typeof Tool).clampToImageBounds(p, this.imageBounds));
+      this.points = this.points.map(p => (this.constructor as typeof Tool).clampToImageBounds(p, Tool.imageBounds));
       const points = [...this.points];
       this.currentShape.update({ type: 'polygon', points });
 

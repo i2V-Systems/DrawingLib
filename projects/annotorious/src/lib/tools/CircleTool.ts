@@ -14,13 +14,11 @@ export class CircleTool extends Tool {
   private startPoint: Point | null = null;
   private onComplete: (shape: CircleShape) => void;
   private minRadius = 2;
-  private imageBounds: { naturalWidth: number, naturalHeight: number };
 
   constructor(svg: SVGSVGElement, onComplete: (shape: CircleShape) => void, imageBounds: { naturalWidth: number, naturalHeight: number }) {
-    super();
+    super(imageBounds);
     this.svg = svg;
     this.onComplete = onComplete;
-    this.imageBounds = imageBounds;
   }
 
   override activate(): void {
@@ -34,7 +32,7 @@ export class CircleTool extends Tool {
 
   override handleMouseDown(point: Point, event: PointerEvent): void {
     if (event.button === 0) { // Left click only
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       if (!this.currentShape) {
         this.startDrawing(clamped);
       }
@@ -43,7 +41,7 @@ export class CircleTool extends Tool {
 
   override handleMouseMove(point: Point, _event: PointerEvent): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       const radius = this.calculateRadius(this.startPoint, clamped) / 2;
       const center = {
         x: this.startPoint.x + (clamped.x - this.startPoint.x) / 2,
@@ -61,7 +59,7 @@ export class CircleTool extends Tool {
 
   override handleMouseUp(point: Point, _event: PointerEvent): void {
     if (this.startPoint && this.currentShape) {
-      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, this.imageBounds);
+      const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       const radius = this.calculateRadius(this.startPoint, clamped) / 2;
       
       // Only complete if the circle has some size
