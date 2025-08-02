@@ -25,7 +25,10 @@ import { Tool } from '../tools';
 @Component({
   selector: 'lib-annotorious-openseadragon',
   templateUrl: './annotorious-openseadragon.component.html',
-  styleUrls: ['./annotorious-openseadragon.component.scss', './../styles/annotorious.css']
+  styleUrls: [
+    './annotorious-openseadragon.component.scss',
+    './../styles/annotorious.css',
+  ],
 })
 export class AnnotoriousOpenseadragonComponent
   implements OnInit, OnDestroy, AfterViewInit
@@ -51,7 +54,6 @@ export class AnnotoriousOpenseadragonComponent
     | 'ellipse'
     | 'freehand'
     | 'text' = 'rectangle';
-
 
   @Output() annotationCreated = new EventEmitter<AnnotationEvent>();
   @Output() annotationUpdated = new EventEmitter<AnnotationEvent>();
@@ -153,8 +155,11 @@ export class AnnotoriousOpenseadragonComponent
       });
     });
 
-  this.viewer.addHandler('resize', this.updateViewerSize.bind(this));
-  document.addEventListener('DOMContentLoaded', this.updateViewerSize.bind(this));
+    this.viewer.addHandler('resize', this.updateViewerSize.bind(this));
+    document.addEventListener(
+      'DOMContentLoaded',
+      this.updateViewerSize.bind(this)
+    );
   }
 
   ngOnInit() {
@@ -190,26 +195,26 @@ export class AnnotoriousOpenseadragonComponent
   }
 
   updateViewerSize = () => {
-  const viewerElement = document.getElementById(this.viewerId);
-  if (!viewerElement) return;
+    const viewerElement = document.getElementById(this.viewerId);
+    if (!viewerElement) return;
 
-  const parentHeight = viewerElement.parentElement?.clientHeight || window.innerHeight;
-  const imgWidth = 640; // Update with dynamic width if needed
-  const imgHeight = 480;
-  const aspectRatio = imgWidth / imgHeight;
-  const calculatedWidth = parentHeight * aspectRatio;
+    const parentHeight =
+      viewerElement.parentElement?.clientHeight || window.innerHeight;
+    const imgWidth = 640; // Update with dynamic width if needed
+    const imgHeight = 480;
+    const aspectRatio = imgWidth / imgHeight;
+    const calculatedWidth = parentHeight * aspectRatio;
 
-  viewerElement.style.height = '100%';
-  viewerElement.style.width = `${calculatedWidth}px`;
+    viewerElement.style.height = '100%';
+    viewerElement.style.width = `${calculatedWidth}px`;
 
-  if (this.annotator) {
-    this.annotator.resizeSvgOverlay();
+    if (this.annotator) {
+      this.annotator.resizeSvgOverlay();
 
-    const newBounds =  this.annotator.getSvgOverlay().getContainerSize();
-    Tool.setContainerBound(newBounds);
-  }
-};
-
+      const newBounds = this.annotator.getSvgOverlay().getContainerSize();
+      Tool.setContainerBound(newBounds);
+    }
+  };
 
   ngOnDestroy() {
     // Clean up
@@ -220,8 +225,8 @@ export class AnnotoriousOpenseadragonComponent
       this.viewer.destroy();
     }
 
-  window.removeEventListener('resize', this.updateViewerSize);
-  document.removeEventListener('DOMContentLoaded', this.updateViewerSize);
+    window.removeEventListener('resize', this.updateViewerSize);
+    document.removeEventListener('DOMContentLoaded', this.updateViewerSize);
   }
 
   getAnnotations(): any[] {
@@ -234,13 +239,27 @@ export class AnnotoriousOpenseadragonComponent
       : null;
   }
 
-  activateTool(tool: string, stroke? : string, strokeWidth? : number, labelText? : string): void {
+  activateTool(
+    tool: string,
+    stroke?: string,
+    strokeWidth?: number,
+    labelText?: string,
+    group?: string
+  ): void {
     this.ngZone.run(() => {
       if (this.annotator) {
         this.annotator.activateTool(tool);
-        if(labelText || stroke || strokeWidth){
+        if (labelText || stroke || strokeWidth) {
           this.annotator.pendingLabelText = labelText;
-          this.annotator.pendingStyle = {stroke : stroke, strokeWidth : strokeWidth} as ShapeStyle;
+          this.annotator.pendingStyle = {
+            stroke: stroke,
+            strokeWidth: strokeWidth,
+          } as ShapeStyle;
+          this.annotator.pendingAnnotationBody = {
+            type: 'TextualBody',
+            purpose: 'classifying',
+            value: `group:${group}`,
+          };
         }
         this.activeTool = tool;
         this.cdr.detectChanges();
@@ -360,37 +379,38 @@ export class AnnotoriousOpenseadragonComponent
     });
   }
 
+  /**
+   * Hide multiple annotations
+   */
+  hideAnnotations(annotationIds: string[]): void {
+    this.ngZone.run(() => {
+      if (this.annotator) {
+        this.annotator.hideAnnotations(annotationIds);
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
-/**
- * Hide multiple annotations
- */
-hideAnnotations(annotationIds: string[]): void {
-  this.ngZone.run(() => {
-    if (this.annotator) {
-      this.annotator.hideAnnotations(annotationIds);
-      this.cdr.detectChanges();
-    }
-  });
-}
+  /**
+   * Show multiple annotations
+   */
+  showAnnotations(annotationIds: string[]): void {
+    this.ngZone.run(() => {
+      if (this.annotator) {
+        this.annotator.showAnnotations(annotationIds);
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
-/**
- * Show multiple annotations
- */
-showAnnotations(annotationIds: string[]): void {
-  this.ngZone.run(() => {
-    if (this.annotator) {
-      this.annotator.showAnnotations(annotationIds);
-      this.cdr.detectChanges();
-    }
-  });
-}
-
-/**
- * Check if annotation is visible
- */
-isAnnotationVisible(annotationId: string): boolean {
-  return this.annotator ? this.annotator.isAnnotationVisible(annotationId) : false;
-}
+  /**
+   * Check if annotation is visible
+   */
+  isAnnotationVisible(annotationId: string): boolean {
+    return this.annotator
+      ? this.annotator.isAnnotationVisible(annotationId)
+      : false;
+  }
 
   getAllAvailableTools(): string[] {
     // Synchronous getter - no zone management needed

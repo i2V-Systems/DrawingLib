@@ -37,6 +37,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   private readonly crosshair?: Crosshair;
   public pendingStyle?: ShapeStyle;
   public pendingLabelText?: string;
+  public pendingAnnotationBody? : AnnotationBody;
 
   constructor(config: OpenSeadragonAnnotatorConfig) {
     super();
@@ -206,10 +207,11 @@ export class OpenSeadragonAnnotator extends EventEmitter {
           const label = this.pendingLabelText
             ? ({ text: this.pendingLabelText, type: 'text' } as TextGeometry)
             : undefined;
+          const body = this.pendingAnnotationBody ? [this.pendingAnnotationBody] : [];
           const shapeAnnotation: Annotation = {
             id: crypto.randomUUID(),
             type: 'Annotation',
-            body: [],
+            body,
             target: {
               source: config.imageUrl || '',
               selector: {

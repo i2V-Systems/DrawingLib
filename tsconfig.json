@@ -5,7 +5,7 @@
   "compilerOptions": {
     "paths": {
       "annotorious": [
-        "./dist/annotorious"
+        "./dist/drawinglib"
       ]
     },
     "outDir": "./dist/out-tsc",
