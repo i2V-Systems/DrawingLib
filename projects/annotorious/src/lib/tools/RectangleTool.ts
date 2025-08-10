@@ -2,6 +2,7 @@ import { Tool } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { RectangleShape } from '../shapes/RectangleShape';
+import { v4 as uuid } from 'uuid';
 
 export class RectangleTool extends Tool {
   override name = 'rectangle';
@@ -36,7 +37,7 @@ export class RectangleTool extends Tool {
       
       // Create initial shape
       this.currentShape = ShapeFactory.createDefault(
-        crypto.randomUUID(),
+        uuid(),
         'rectangle'
       ) as RectangleShape;
       

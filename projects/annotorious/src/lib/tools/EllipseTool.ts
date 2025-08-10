@@ -2,6 +2,7 @@ import { Tool } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { EllipseShape } from '../shapes/EllipseShape';
+import { v4 as uuid } from 'uuid';
 
 export class EllipseTool extends Tool {
   override name = 'ellipse';
@@ -102,7 +103,7 @@ export class EllipseTool extends Tool {
     
     // Create initial shape
     this.currentShape = ShapeFactory.createDefault(
-      crypto.randomUUID(),
+      uuid(),
       'ellipse'
     ) as EllipseShape;
     

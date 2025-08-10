@@ -14,6 +14,7 @@ import { EditManager } from '../managers/EditManager';
 import { convertToViewportCoordinates } from '../../utils/SVGUtils';
 import { TextGeometry } from '../../types';
 import { KeyboardManager } from '../managers';
+import { v4 as uuid } from 'uuid';
 
 export interface OpenSeadragonAnnotatorConfig {
   viewer: OpenSeadragon.Viewer;
@@ -209,7 +210,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
             : undefined;
           const body = this.pendingAnnotationBody ? [this.pendingAnnotationBody] : [];
           const shapeAnnotation: Annotation = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             type: 'Annotation',
             body,
             target: {
@@ -351,7 +352,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     this.state.loadAnnotations(
       annotations.map((annotation) => {
         const shape = ShapeFactory.createFromGeometry(
-          annotation.id || crypto.randomUUID(),
+          annotation.id || uuid(),
           convertToViewportCoordinates(
             annotation.target.selector.geometry,
             this.viewer.viewport
@@ -364,7 +365,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   // Update addAnnotation to remove svgOverlay parameter
   addAnnotation(annotation: Annotation): void {
     const shape = ShapeFactory.createFromGeometry(
-      annotation.id || crypto.randomUUID(),
+      annotation.id || uuid(),
       convertToViewportCoordinates(
         annotation.target.selector.geometry,
         this.viewer.viewport

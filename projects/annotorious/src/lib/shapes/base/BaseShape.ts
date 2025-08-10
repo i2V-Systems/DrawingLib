@@ -137,6 +137,8 @@ export abstract class BaseShape
         this.labelElement.style.fill = 'black';
         this.labelBbox.style.fill = 'white';
         if (this.currentStyle) {
+          this.labelBbox.style.stroke = this.currentStyle.selectionOutlineColor;
+          this.labelBbox.style.strokeWidth = '3';
           this.selectionOutline.style.stroke =
             this.currentStyle.selectionOutlineColor;
           this.selectionOutline.style.strokeWidth = (
@@ -149,6 +151,8 @@ export abstract class BaseShape
         this.selectionOutline.style.display = 'none';
         this.labelElement.style.fill = this.currentStyle?.labelTextFill || 'white';
         this.labelBbox.style.fill = this.currentStyle?.stroke || 'black';
+        this.labelBbox.style.stroke = 'black';
+        this.labelBbox.style.strokeWidth = '1';
         this.hideEditHandles();
       }
       this.emit(selected ? 'select' : 'deselect', { id: this.id });

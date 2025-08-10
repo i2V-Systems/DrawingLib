@@ -1,6 +1,7 @@
 import { PolylineArrowShape } from "../shapes/ArrowPolylineShape";
 import { Point, PolylineArrowGeometry } from "../types";
 import { Tool } from "./base";
+import { v4 as uuid } from 'uuid';
 
 export class PolylineArrowTool extends Tool {
   override capabilities = { supportsMouse: true };
@@ -12,6 +13,7 @@ export class PolylineArrowTool extends Tool {
   private isCurrentlyDrawing = false;
   private onComplete: (shape: PolylineArrowShape) => void;
   private minPoints = 2; // Polylines need minimum 2 points
+  private snapDistance = 30;
 
   constructor(
     svg: SVGSVGElement, 
@@ -85,7 +87,7 @@ export class PolylineArrowTool extends Tool {
       arrows: []
     };
     
-    this.currentShape = new PolylineArrowShape(crypto.randomUUID(), geometry);
+    this.currentShape = new PolylineArrowShape(uuid(), geometry);
     
     const element = this.currentShape.getElement();
     if (element && this.svg.contains(element)) {
@@ -95,6 +97,7 @@ export class PolylineArrowTool extends Tool {
   }
 
   private addPoint(point: Point): void {
+    if(!this.isNearPoint(point, this.points[this.points.length - 1])){
     this.points.push(point);
     if (this.currentShape) {
       // Create arrows for all segments
@@ -106,6 +109,7 @@ export class PolylineArrowTool extends Tool {
         })) : [];
       
       this.currentShape.update({ type: 'polyline-arrow', points: this.points, arrows });
+    }
     }
   }
 
@@ -151,5 +155,10 @@ export class PolylineArrowTool extends Tool {
 
     this.points = [];
     this.isCurrentlyDrawing = false;
+  }
+    private isNearPoint(p1: Point, p2: Point): boolean {
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    return Math.sqrt(dx * dx + dy * dy) < this.snapDistance;
   }
 }

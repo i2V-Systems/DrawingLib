@@ -2,6 +2,7 @@ import { Tool } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { PolygonShape } from '../shapes/PolygonShape';
+import { v4 as uuid } from 'uuid';
 
 export class FreehandTool extends Tool {
   override name = 'freehand';
@@ -73,7 +74,7 @@ export class FreehandTool extends Tool {
       if (this.points.length >= 3) {
         // Create polygon shape from points
         this.currentShape = ShapeFactory.createDefault(
-          crypto.randomUUID(),
+          uuid(),
           'polygon'
         ) as PolygonShape;
         

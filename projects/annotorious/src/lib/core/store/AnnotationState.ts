@@ -4,6 +4,7 @@ import { Shape } from '../../shapes/base';
 import { SpatialIndex } from './SpatialIndex';
 import { HitDetection, SVGUtils } from '../../utils';
 import { Point, TextGeometry } from '../../types/shape.types';
+import { v4 as uuid } from 'uuid';
 interface AnnotationStateEvents {
   loaded: {};
   create: { id: string };
@@ -59,7 +60,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
     annotationShapes: { annotation: Annotation; shape: Shape }[]
   ): void {
     for (const aS of annotationShapes) {
-      const id = aS.annotation.id || crypto.randomUUID();
+      const id = aS.annotation.id || uuid();
       aS.annotation.id = id;
       this.annotations.set(id, aS.annotation);
       if (aS.shape) {
@@ -95,7 +96,7 @@ export class AnnotationState extends EventEmitter<AnnotationStateEvents> {
    * Add a new annotation with its associated shape
    */
   add(annotation: Annotation, shape?: Shape): void {
-    const id = annotation.id || crypto.randomUUID();
+    const id = annotation.id || uuid();
     annotation.id = id;
     this.annotations.set(id, annotation);
 

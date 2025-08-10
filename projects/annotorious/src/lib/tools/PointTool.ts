@@ -2,6 +2,7 @@ import { Tool } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { PointShape } from '../shapes/PointShape';
+import { v4 as uuid } from 'uuid';
 
 export class PointTool extends Tool {
   override name = 'point';
@@ -32,7 +33,7 @@ export class PointTool extends Tool {
       const clamped = (this.constructor as typeof Tool).clampToImageBounds(point, Tool.imageBounds);
       // Create point shape immediately on click
       const pointShape = ShapeFactory.createDefault(
-        crypto.randomUUID(),
+        uuid(),
         'point'
       ) as PointShape;
       

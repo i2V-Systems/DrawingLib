@@ -2,6 +2,7 @@ import { Tool } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { CircleShape } from '../shapes/CircleShape';
+import { v4 as uuid } from 'uuid';
 
 export class CircleTool extends Tool {
   override name = 'circle';
@@ -79,7 +80,7 @@ export class CircleTool extends Tool {
     
     // Create initial shape
     this.currentShape = ShapeFactory.createDefault(
-      crypto.randomUUID(),
+      uuid(),
       'circle'
     ) as CircleShape;
     
