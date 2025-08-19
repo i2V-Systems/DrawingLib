@@ -103,7 +103,7 @@ export class HitDetection {
 /**
  * Test if a point hits text (direct text hit, not rectangle bounds)
  */
-static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DEFAULT_TOLERANCE): HitTestResult {
+static hitTestText(point: Point, geometry: Geometry, tolerance: number = 0): HitTestResult {
   const { x, y, text, style } = geometry as TextGeometry;
   const fontSize =  style?.fontSize || 16;
   const fontFamily = style?.fontFamily || 'Arial';
@@ -119,7 +119,7 @@ static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DE
     height: estimatedHeight
   };
 
-  const distance = this.distanceToTextBounds(point, textBounds);
+  const distance = this.distanceToTextBounds(point, textBounds, fontSize);
   
   return {
     hit: distance <= tolerance,
@@ -132,17 +132,25 @@ static hitTestText(point: Point, geometry: Geometry, tolerance: number = this.DE
 /**
  * Calculate distance from point to text bounds
  */
-private static distanceToTextBounds(point: Point, bounds: { x: number; y: number; width: number; height: number }): number {
+private static distanceToTextBounds(point: Point, bounds: { x: number; y: number; width: number; height: number }, fontSize : number): number {
   const { x, y, width, height } = bounds;
   
-  // If point is inside text bounds, distance is 0
-  if (point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height) {
+  // Create a smaller "core" area that represents the actual text more accurately
+  const padding = fontSize * 0.1; // 10% of font size as padding
+  const coreX = x + padding;
+  const coreY = y + padding;
+  const coreWidth = width - (padding * 2);
+  const coreHeight = height - (padding * 2);
+  
+  // If point is in the core text area, it's a direct hit
+  if (point.x >= coreX && point.x <= coreX + coreWidth && 
+      point.y >= coreY && point.y <= coreY + coreHeight) {
     return 0;
   }
   
-  // Calculate distance to nearest edge
-  const dx = Math.max(x - point.x, 0, point.x - (x + width));
-  const dy = Math.max(y - point.y, 0, point.y - (y + height));
+  // Calculate distance to the core area (not the full bounds)
+  const dx = Math.max(coreX - point.x, 0, point.x - (coreX + coreWidth));
+  const dy = Math.max(coreY - point.y, 0, point.y - (coreY + coreHeight));
   
   return Math.sqrt(dx * dx + dy * dy);
 }

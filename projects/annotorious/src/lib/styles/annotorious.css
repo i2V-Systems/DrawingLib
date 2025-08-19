@@ -93,6 +93,10 @@
 
 .annotation-label{
   cursor : default;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 .annotation-text {
   font-size: 16px;

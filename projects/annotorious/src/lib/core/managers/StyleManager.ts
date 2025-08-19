@@ -128,29 +128,28 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
       ? { ...this.currentTheme.shapes, ...customStyle }
       : { ...this.currentTheme.shapes };
 
-    // Apply zoom-independent scaling
     const scaleFactor = 1 / this.currentZoom;
-
-    // Compute handle size based on strokeWidth and zoom
     const computedHandleSize = this.computeHandleSize(
       baseStyle.strokeWidth,
       scaleFactor
     );
 
+    // this is to ensure complementary colors are used to highlight text
+    // and outlines, improving visibility against the shape's stroke color
+    const complementaryColor = this.chooseContrastColor(baseStyle.stroke);
+
     return {
       ...baseStyle,
-      // Fixed computed properties
       fill: 'none',
-      selectionOutlineColor: this.FIXED_OUTLINE_COLOR,
+      selectionOutlineColor: complementaryColor,
       selectionOutlineWidth:
         baseStyle.strokeWidth + this.FIXED_OUTLINE_WIDTH_OFFSET,
-      handleFill: this.FIXED_HANDLE_FILL,
+      handleFill: complementaryColor,
       handleStroke: this.FIXED_HANDLE_STROKE,
-      labelTextFill: this.FIXED_LABEL_TEXT_FILL,
+      labelTextFill: complementaryColor,
       arrowStroke: this.FIXED_ARROW_STROKE,
-      // Zoom-adjusted properties
       handleSize: computedHandleSize,
-      fontSize: baseStyle.fontSize
+      fontSize: baseStyle.fontSize,
     };
   }
 
@@ -160,6 +159,53 @@ export class StyleManager extends EventEmitter<StyleManagerEvents> {
     const strokeFactor = strokeWidth * 0.5; // Handle grows with stroke width
     return (baseSize + strokeFactor) * scaleFactor;
   }
+
+/**
+ * Parse any CSS color string to RGB {r, g, b}
+ * Supports hex (#aabbcc), rgb(), rgba(), and named colors like "red"
+ */
+private parseColor(color: string): { r: number; g: number; b: number } {
+  // Create temporary element to leverage browser's built-in color parsing
+  const el = document.createElement('div');
+  el.style.color = color;
+  document.body.appendChild(el);
+  const computedColor = getComputedStyle(el).color;
+  document.body.removeChild(el);
+
+  // Extract RGB values from computed style (format: "rgb(r, g, b)")
+  const match = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (match) {
+    return {
+      r: parseInt(match[1], 10),
+      g: parseInt(match[2], 10),
+      b: parseInt(match[3], 10)
+    };
+  }
+
+  // Fallback to black if parsing fails
+  return { r: 0, g: 0, b: 0 };
+}
+
+/**
+ * Calculate relative luminance according to WCAG guidelines
+ */
+private luminance(rgb: { r: number; g: number; b: number }): number {
+  const a = [rgb.r, rgb.g, rgb.b].map((v) => {
+    const chan = v / 255;
+    return chan <= 0.03928 ? chan / 12.92 : Math.pow((chan + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+}
+
+/**
+ * Choose black or white text color for maximum contrast
+ */
+private chooseContrastColor(color: string): string {
+  const rgb = this.parseColor(color);
+  const lum = this.luminance(rgb);
+  return lum > 0.179 ? '#000000' : '#FFFFFF';
+}
+
 
   // Create styles with proper computed relationships
   createSVGStyles(): string {

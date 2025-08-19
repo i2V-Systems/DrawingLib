@@ -167,31 +167,30 @@ export class SVGUtils {
   /**
  * Estimate text width for bounding box calculations
  */
-/**
- * Estimate text width with better accuracy and fallback handling
- */
 static estimateTextWidth(text: string, fontSize: number, fontFamily: string): number {
   if (!text || !fontSize) {
-    return 100; // Fallback width
+    return 0;
   }
   
   try {
-    // Try canvas measurement first
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.font = `${fontSize}px ${fontFamily}`;
       const metrics = ctx.measureText(text);
-      return metrics.width;
+      
+      // Apply more aggressive reduction - canvas typically overestimates by 20-30%
+      return metrics.width * 0.70; // Reduced from 0.85 to 0.75
     }
   } catch (error) {
     console.warn('Canvas text measurement failed, using estimation');
   }
   
-  // Fallback to character-based estimation
-  const avgCharWidth = fontSize * 0.6; // Average character width ratio
+  // More conservative fallback estimation
+  const avgCharWidth = fontSize * 0.45; // Reduced from 0.6 to 0.45
   return text.length * avgCharWidth;
 }
+
 
 
   /**

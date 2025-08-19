@@ -48,7 +48,6 @@ export abstract class BaseShape
     ) as SVGGraphicsElement;
     this.selectionOutline.classList.remove('annotation-shape');
     this.selectionOutline.classList.add('selection-outline');
-    this.selectionOutline.style.display = 'none';
     this.selectionOutline.style.fill = 'none';
 
     // Create handles group
@@ -95,67 +94,73 @@ export abstract class BaseShape
   abstract getGeometry(): Geometry;
   abstract update(geometry: Geometry): void;
 
-  // Simplified updateLabel method
-  updateLabel(label: TextGeometry): void {
-    this.labelElement.style.display = '';
-    this.labelBbox.style.display = '';
-    this.labelElement.setAttribute('x', label.x.toString());
-    this.labelElement.setAttribute('y', label.y.toString());
-    this.labelElement.textContent = label.text;
+updateLabel(label: TextGeometry): void {
+  this.labelElement.style.display = '';
+  this.labelBbox.style.display = '';
 
-    if (label.style) {
-      for (const key in label.style) {
-        const value = label.style[key as keyof typeof label.style];
-        if (value !== undefined) {
-          this.labelElement.style[key as any] = String(value);
-        }
+  this.labelElement.setAttribute('x', label.x.toString());
+  this.labelElement.setAttribute('y', label.y.toString());
+  this.labelElement.textContent = label.text;
+
+  if (label.style) {
+    for (const key in label.style) {
+      const value = label.style[key as keyof typeof label.style];
+      if (value !== undefined) {
+        this.labelElement.style[key as any] = String(value);
       }
     }
-
-    // Update bbox
-    setTimeout(() => {
-      const padding = 5;
-      const bbox = this.labelElement.getBBox();
-      this.labelBbox.setAttribute('x', (bbox.x - padding).toString());
-      this.labelBbox.setAttribute('y', (bbox.y - padding).toString());
-      this.labelBbox.setAttribute(
-        'width',
-        (bbox.width + 2 * padding).toString()
-      );
-      this.labelBbox.setAttribute(
-        'height',
-        (bbox.height + 2 * padding).toString()
-      );
-    }, 0);
   }
+
+  // Use requestAnimationFrame for smooth updates during dragging
+  requestAnimationFrame(() => {
+    const padding = 5;
+    const bbox = this.labelElement.getBBox();
+    this.labelBbox.setAttribute('x', (bbox.x - padding).toString());
+    this.labelBbox.setAttribute('y', (bbox.y - padding).toString());
+    this.labelBbox.setAttribute('width', (bbox.width + 2 * padding).toString());
+    this.labelBbox.setAttribute('height', (bbox.height + 2 * padding).toString());
+  });
+}
 
   setSelected(selected: boolean): void {
     if (this.selected !== selected) {
       this.selected = selected;
+      
+      this.updateOutlineStyles();
+      
       if (selected) {
-        this.selectionOutline.style.display = '';
         this.labelElement.style.fill = 'black';
         this.labelBbox.style.fill = 'white';
-        if (this.currentStyle) {
-          this.labelBbox.style.stroke = this.currentStyle.selectionOutlineColor;
-          this.labelBbox.style.strokeWidth = '3';
-          this.selectionOutline.style.stroke =
-            this.currentStyle.selectionOutlineColor;
-          this.selectionOutline.style.strokeWidth = (
-            this.currentStyle.strokeWidth + 3
-          ).toString();
-        }
-        this.updateOutline();
         this.showEditHandles();
       } else {
-        this.selectionOutline.style.display = 'none';
         this.labelElement.style.fill = this.currentStyle?.labelTextFill || 'white';
         this.labelBbox.style.fill = this.currentStyle?.stroke || 'black';
-        this.labelBbox.style.stroke = 'black';
-        this.labelBbox.style.strokeWidth = '1';
         this.hideEditHandles();
       }
+
       this.emit(selected ? 'select' : 'deselect', { id: this.id });
+    }
+  }
+
+  private updateOutlineStyles(): void {
+    if (!this.currentStyle) return;
+
+    if (this.selected) {
+      // When selected: strokeWidth = shape strokeWidth + 3, color = selectionOutlineColor
+      this.selectionOutline.style.stroke = this.currentStyle.selectionOutlineColor;
+      this.selectionOutline.style.strokeWidth = (this.currentStyle.strokeWidth + 3).toString();
+      
+      // Label bbox outline when selected
+      this.labelBbox.style.stroke = this.currentStyle.selectionOutlineColor;
+      this.labelBbox.style.strokeWidth = '3';
+    } else {
+      // When not selected: strokeWidth = shape strokeWidth + 1, color = black
+      this.selectionOutline.style.stroke = 'black';
+      this.selectionOutline.style.strokeWidth = (this.currentStyle.strokeWidth + 1).toString();
+      
+      // Label bbox outline when not selected
+      this.labelBbox.style.stroke = 'black';
+      this.labelBbox.style.strokeWidth = '1';
     }
   }
 
@@ -202,18 +207,15 @@ export abstract class BaseShape
 
   applyStyle(style: ShapeStyle): void {
     this.currentStyle = { ...style };
-
     // Apply shape-specific styles
     this.applyShapeStyles(style);
-
-    // Apply selection outline with fixed relationship
-    this.applySelectionStyles(style);
-
     // Apply handle styles with fixed properties
     this.applyHandleStyles(style);
-
     // Apply label styles with fixed relationships
     this.applyLabelStyles(style);
+    
+    // Update outline styles based on current selection state
+    this.updateOutlineStyles();
   }
 
   private applyShapeStyles(style: ShapeStyle): void {
@@ -238,14 +240,7 @@ export abstract class BaseShape
     }
   }
 
-  private applySelectionStyles(style: ShapeStyle): void {
-    if (this.selectionOutline) {
-      // Fixed outline color and computed width relationship
-      this.selectionOutline.style.stroke = style.selectionOutlineColor;
-      this.selectionOutline.style.strokeWidth =
-        style.selectionOutlineWidth.toString();
-    }
-  }
+
 
   private applyHandleStyles(style: ShapeStyle): void {
     this.handles.forEach((handle) => {
@@ -331,9 +326,10 @@ export abstract class BaseShape
           );
         }
       }
+      // Update outline styles based on selection state
+      this.updateOutlineStyles();
     }
   }
-
 
   /**
    * Check if shape has a label
