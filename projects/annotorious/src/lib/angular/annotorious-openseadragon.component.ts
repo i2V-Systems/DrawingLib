@@ -26,8 +26,7 @@ import { Tool } from '../tools';
   selector: 'lib-annotorious-openseadragon',
   templateUrl: './annotorious-openseadragon.component.html',
   styleUrls: [
-    './annotorious-openseadragon.component.scss',
-    './../styles/annotorious.css',
+    './annotorious-openseadragon.component.scss'
   ],
 })
 export class AnnotoriousOpenseadragonComponent

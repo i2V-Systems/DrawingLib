@@ -255,6 +255,16 @@ private chooseContrastColor(color: string): string {
             .annotation-shape.hover {
                 stroke: ${this.FIXED_OUTLINE_COLOR};
             }
+            
+            .annotation-label{
+              cursor : default;
+              user-select: none;
+              -webkit-user-select: none;
+              -moz-user-select: none;
+              -ms-user-select: none;
+              -webkit-touch-callout: none;
+              -khtml-user-select: none;
+            }
         `;
   }
 

@@ -1,10 +1,12 @@
 {
   "name": "@i2v-systems/drawinglib",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "peerDependencies": {
     "@angular/common": "^18.2.0",
     "@angular/core": "^18.2.0",
-    "openseadragon": "^4.1.0"
+    "openseadragon": "^4.1.0",
+    "rbush": "^4.0.1",
+    "uuid": "^11.1.0"
   },
   "repository": {
     "type": "git",
@@ -14,8 +16,7 @@
     "registry": "https://npm.pkg.github.com/i2V-Systems"
   },
   "dependencies": {
-    "tslib": "^2.3.0",
-    "rbush": "^4.0.1"
+    "tslib": "^2.3.0"
   },
   "sideEffects": false
 }
