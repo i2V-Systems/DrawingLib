@@ -29,7 +29,7 @@ export class ArrowSymbolRenderer {
     text.setAttribute('x', position.x.toString());
     text.setAttribute('y', position.y.toString());
     text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
     text.setAttribute('font-size', (config.fontSize || 30).toString());
     text.setAttribute('fill', config.fill || 'currentColor');
     text.setAttribute('class', config.className || 'arrow-symbol');

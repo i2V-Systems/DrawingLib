@@ -257,7 +257,7 @@ export class AnnotoriousOpenseadragonComponent
           this.annotator.pendingAnnotationBody = {
             type: 'TextualBody',
             purpose: 'classifying',
-            value: `group:${group}`,
+            value: `${group}`,
           };
         }
         this.activeTool = tool;

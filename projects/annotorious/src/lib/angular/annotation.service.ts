@@ -224,7 +224,7 @@ private createAnnotationBody(labelName?: string, group?: string): AnnotationBody
     body.push({
       type: 'TextualBody',
       purpose: 'classifying',
-      value: `group:${group}`
+      value: `${group}`
     });
   }
 
