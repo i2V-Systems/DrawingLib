@@ -382,6 +382,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   removeAnnotation(id: string): void {
+    this.destroy();
     this.state.remove(id);
     this.redrawAll();
   }
@@ -438,6 +439,7 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   removeAnnotationBody(id: string, bodyIndex: number): void {
+
     const annotation = this.state.getAnnotation(id);
     if (annotation) {
       const body = [...annotation.body];
@@ -529,7 +531,7 @@ hideAnnotations(ids: string[]): void {
 }
 
 /**
- * Show multiple annotations by IDs  
+ * Show multiple annotations by IDs
  */
 showAnnotations(ids: string[]): void {
   ids.forEach(id => this.state.setAnnotationVisible(id, true));
@@ -572,10 +574,27 @@ getVisibleAnnotationIds(): string[] {
     this.styleManager.destroy();
     this.editManager.destroy();
     // Destroy SVG overlay
+     // Clear state
+    this.state?.clear();
+
+    // Destroy SVG overlay
     this.svgOverlay.destroy();
 
-    // Clear state
-    this.state.clear();
+    const canvas = this.viewer?.canvas;
+    if (canvas) {
+      const annotationSvgs = canvas.querySelectorAll('svg.annotation-svg');
+      annotationSvgs.forEach(svg => {
+        if (svg.parentNode) {
+          svg.parentNode.removeChild(svg);
+          console.log('Force removed annotation SVG during destroy');
+        }
+      });
+    }
+
+    // Remove all event listeners
+    this.removeAllListeners();
+
+    console.log('Annotator destruction complete');
   }
   /**
    * Set or update label for an annotation
