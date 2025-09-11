@@ -90,6 +90,12 @@ export class AnnotoriousOpenseadragonComponent
     this.viewer.addHandler('open', () => {
       this.updateViewerSize();
       this.ngZone.runOutsideAngular(() => {
+      if (this.annotator) {
+        console.log('Destroying existing annotator instance');
+        this.annotator.destroy();
+        this.annotator = null as any;
+        this.isAnnotatorReady = false;
+      }
         this.annotator = new OpenSeadragonAnnotator({
           viewer: this.viewer,
           theme: this.theme,

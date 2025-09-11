@@ -382,7 +382,6 @@ export class OpenSeadragonAnnotator extends EventEmitter {
   }
 
   removeAnnotation(id: string): void {
-    this.destroy();
     this.state.remove(id);
     this.redrawAll();
   }
