@@ -248,7 +248,15 @@ export class SvgOverlay implements SvgOverlayInfo {
           x: textPos.x,
           y: textPos.y,
         };
-
+  case 'line':
+      const [start, end] = geometry.points;
+      return {
+        ...geometry,
+        points: [
+          this.svgToImage(start.x, start.y),
+          this.svgToImage(end.x, end.y)
+        ],
+      };
       default:
         console.warn(`Unsupported geometry type: ${geometry.type}`);
         return geometry;

@@ -1,4 +1,4 @@
-import { Annotation } from "../types";
+import { Annotation } from '../types';
 
 export const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
@@ -14,7 +14,9 @@ export class SVGUtils {
    * Create an SVG point
    */
   static createPoint(x: number, y: number): DOMPoint {
-    const point = (document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement).createSVGPoint();
+    const point = (
+      document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement
+    ).createSVGPoint();
     point.x = x;
     point.y = y;
     return point;
@@ -23,7 +25,10 @@ export class SVGUtils {
   /**
    * Get mouse position relative to an SVG element
    */
-  static getMousePosition(evt: PointerEvent, svg: SVGSVGElement): { x: number; y: number } {
+  static getMousePosition(
+    evt: PointerEvent,
+    svg: SVGSVGElement
+  ): { x: number; y: number } {
     const CTM = svg.getScreenCTM();
     if (CTM) {
       const point = svg.createSVGPoint();
@@ -42,15 +47,20 @@ export class SVGUtils {
     const bbox = element.getBBox();
     return {
       x: bbox.x + bbox.width / 2,
-      y: bbox.y + bbox.height / 2
+      y: bbox.y + bbox.height / 2,
     };
   }
 
   /**
    * Transform a point by a matrix
    */
-  static transformPoint(point: { x: number; y: number }, matrix: DOMMatrix): { x: number; y: number } {
-    const svgPoint = (document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement).createSVGPoint();
+  static transformPoint(
+    point: { x: number; y: number },
+    matrix: DOMMatrix
+  ): { x: number; y: number } {
+    const svgPoint = (
+      document.createElementNS(SVG_NAMESPACE, 'svg') as SVGSVGElement
+    ).createSVGPoint();
     svgPoint.x = point.x;
     svgPoint.y = point.y;
     const transformed = svgPoint.matrixTransform(matrix);
@@ -74,12 +84,20 @@ export class SVGUtils {
   /**
    * Set the rotation of an SVG element
    */
-  static setRotation(element: SVGGraphicsElement, angle: number, cx?: number, cy?: number): void {
+  static setRotation(
+    element: SVGGraphicsElement,
+    angle: number,
+    cx?: number,
+    cy?: number
+  ): void {
     if (typeof cx === 'number' && typeof cy === 'number') {
       element.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
     } else {
       const center = this.getCenter(element);
-      element.setAttribute('transform', `rotate(${angle} ${center.x} ${center.y})`);
+      element.setAttribute(
+        'transform',
+        `rotate(${angle} ${center.x} ${center.y})`
+      );
     }
   }
 
@@ -89,12 +107,19 @@ export class SVGUtils {
   static createPath(points: { x: number; y: number }[]): string {
     if (points.length === 0) return '';
 
-    return `M ${points[0].x} ${points[0].y} ` +
-      points.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ') +
-      (points.length > 2 ? ' Z' : '');
+    return (
+      `M ${points[0].x} ${points[0].y} ` +
+      points
+        .slice(1)
+        .map((point) => `L ${point.x} ${point.y}`)
+        .join(' ') +
+      (points.length > 2 ? ' Z' : '')
+    );
   }
 
-  static getAnnotationBBox(annotation: Annotation): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  static getAnnotationBBox(
+    annotation: Annotation
+  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
     const geom = annotation.target?.selector?.geometry;
     if (!geom) return null;
     switch (geom.type) {
@@ -103,7 +128,7 @@ export class SVGUtils {
           minX: geom.x,
           minY: geom.y,
           maxX: geom.x + geom.width,
-          maxY: geom.y + geom.height
+          maxY: geom.y + geom.height,
         };
       case 'polygon':
       case 'polyline-arrow':
@@ -115,7 +140,7 @@ export class SVGUtils {
             minX: Math.min(...xs),
             minY: Math.min(...ys),
             maxX: Math.max(...xs),
-            maxY: Math.max(...ys)
+            maxY: Math.max(...ys),
           };
         }
         break;
@@ -124,31 +149,35 @@ export class SVGUtils {
           minX: geom.cx - geom.r,
           minY: geom.cy - geom.r,
           maxX: geom.cx + geom.r,
-          maxY: geom.cy + geom.r
+          maxY: geom.cy + geom.r,
         };
       case 'ellipse':
         return {
           minX: geom.cx - geom.rx,
           minY: geom.cy - geom.ry,
           maxX: geom.cx + geom.rx,
-          maxY: geom.cy + geom.ry
+          maxY: geom.cy + geom.ry,
         };
-        case 'text':
-          // Ensure we have valid font properties
-          const fontSize = geom.style?.fontSize || 16;
-          const fontFamily = geom.style?.fontFamily || 'Arial';
-          
-          // Use more robust text width estimation
-          const estimatedWidth = this.estimateTextWidth(geom.text, fontSize, fontFamily);
-          const estimatedHeight = fontSize * 1.2; // Line height approximation
-          
-          return {
-            minX: geom.x - estimatedWidth / 2,
-            minY: geom.y - estimatedHeight / 2,
-            maxX: geom.x + estimatedWidth / 2,
-            maxY: geom.y + estimatedHeight / 2
-          };
-        
+      case 'text':
+        // Ensure we have valid font properties
+        const fontSize = geom.style?.fontSize || 16;
+        const fontFamily = geom.style?.fontFamily || 'Arial';
+
+        // Use more robust text width estimation
+        const estimatedWidth = this.estimateTextWidth(
+          geom.text,
+          fontSize,
+          fontFamily
+        );
+        const estimatedHeight = fontSize * 1.2; // Line height approximation
+
+        return {
+          minX: geom.x - estimatedWidth / 2,
+          minY: geom.y - estimatedHeight / 2,
+          maxX: geom.x + estimatedWidth / 2,
+          maxY: geom.y + estimatedHeight / 2,
+        };
+
       case 'point':
         // Use a small box around the point for hit testing
         const size = (geom.style?.size || 6) / 2;
@@ -156,8 +185,20 @@ export class SVGUtils {
           minX: geom.x - size,
           minY: geom.y - size,
           maxX: geom.x + size,
-          maxY: geom.y + size
+          maxY: geom.y + size,
         };
+      case 'line':
+        if (geom.points && geom.points.length === 2) {
+          const [p1, p2] = geom.points;
+          return {
+            minX: Math.min(p1.x, p2.x),
+            minY: Math.min(p1.y, p2.y),
+            maxX: Math.max(p1.x, p2.x),
+            maxY: Math.max(p1.y, p2.y),
+          };
+        }
+        break;
+
       default:
         return null;
     }
@@ -165,38 +206,43 @@ export class SVGUtils {
   }
 
   /**
- * Estimate text width for bounding box calculations
- */
-static estimateTextWidth(text: string, fontSize: number, fontFamily: string): number {
-  if (!text || !fontSize) {
-    return 0;
-  }
-  
-  try {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = `${fontSize}px ${fontFamily}`;
-      const metrics = ctx.measureText(text);
-      
-      // Apply more aggressive reduction - canvas typically overestimates by 20-30%
-      return metrics.width * 0.70; // Reduced from 0.85 to 0.75
+   * Estimate text width for bounding box calculations
+   */
+  static estimateTextWidth(
+    text: string,
+    fontSize: number,
+    fontFamily: string
+  ): number {
+    if (!text || !fontSize) {
+      return 0;
     }
-  } catch (error) {
-    console.warn('Canvas text measurement failed, using estimation');
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        const metrics = ctx.measureText(text);
+
+        // Apply more aggressive reduction - canvas typically overestimates by 20-30%
+        return metrics.width * 0.7; // Reduced from 0.85 to 0.75
+      }
+    } catch (error) {
+      console.warn('Canvas text measurement failed, using estimation');
+    }
+
+    // More conservative fallback estimation
+    const avgCharWidth = fontSize * 0.45; // Reduced from 0.6 to 0.45
+    return text.length * avgCharWidth;
   }
-  
-  // More conservative fallback estimation
-  const avgCharWidth = fontSize * 0.45; // Reduced from 0.6 to 0.45
-  return text.length * avgCharWidth;
-}
-
-
 
   /**
    * Check if a point is inside a polygon
    */
-  static isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
+  static isPointInPolygon(
+    point: { x: number; y: number },
+    polygon: { x: number; y: number }[]
+  ): boolean {
     let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       const xi = polygon[i].x;
@@ -204,8 +250,9 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
       const xj = polygon[j].x;
       const yj = polygon[j].y;
 
-      const intersect = ((yi > point.y) !== (yj > point.y)) &&
-        (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+      const intersect =
+        yi > point.y !== yj > point.y &&
+        point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
 
       if (intersect) inside = !inside;
     }
@@ -216,7 +263,10 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   /**
    * Calculate the distance between two points
    */
-  static distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
+  static distance(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number }
+  ): number {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     return Math.sqrt(dx * dx + dy * dy);
@@ -225,19 +275,22 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   /**
    * Create an SVG marker element
    */
-  static createMarker(id: string, options: {
-    width?: number;
-    height?: number;
-    refX?: number;
-    refY?: number;
-    color?: string;
-  } = {}): SVGMarkerElement {
+  static createMarker(
+    id: string,
+    options: {
+      width?: number;
+      height?: number;
+      refX?: number;
+      refY?: number;
+      color?: string;
+    } = {}
+  ): SVGMarkerElement {
     const {
       width = 10,
       height = 10,
       refX = 5,
       refY = 5,
-      color = 'black'
+      color = 'black',
     } = options;
 
     const marker = this.createElement('marker') as SVGMarkerElement;
@@ -324,7 +377,10 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   /**
    * Transform a point from screen coordinates to SVG coordinates
    */
-  static screenToSVG(point: { x: number; y: number }, svg: SVGSVGElement): { x: number; y: number } {
+  static screenToSVG(
+    point: { x: number; y: number },
+    svg: SVGSVGElement
+  ): { x: number; y: number } {
     const CTM = svg.getScreenCTM();
     if (!CTM) return point;
 
@@ -339,7 +395,10 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   /**
    * Transform a point from SVG coordinates to screen coordinates
    */
-  static svgToScreen(point: { x: number; y: number }, svg: SVGSVGElement): { x: number; y: number } {
+  static svgToScreen(
+    point: { x: number; y: number },
+    svg: SVGSVGElement
+  ): { x: number; y: number } {
     const CTM = svg.getScreenCTM();
     if (!CTM) return point;
 
@@ -370,7 +429,9 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
    */
   static translate(element: SVGElement, x: number, y: number): void {
     const currentTransform = this.getTransform(element);
-    const newTransform = currentTransform ? `${currentTransform} translate(${x} ${y})` : `translate(${x} ${y})`;
+    const newTransform = currentTransform
+      ? `${currentTransform} translate(${x} ${y})`
+      : `translate(${x} ${y})`;
     this.setTransform(element, newTransform);
   }
 
@@ -380,17 +441,26 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   static scale(element: SVGElement, sx: number, sy?: number): void {
     const currentTransform = this.getTransform(element);
     const scaleY = sy !== undefined ? sy : sx;
-    const newTransform = currentTransform ? `${currentTransform} scale(${sx} ${scaleY})` : `scale(${sx} ${scaleY})`;
+    const newTransform = currentTransform
+      ? `${currentTransform} scale(${sx} ${scaleY})`
+      : `scale(${sx} ${scaleY})`;
     this.setTransform(element, newTransform);
   }
 
   /**
    * Apply a rotation transform to an SVG element
    */
-  static rotate(element: SVGElement, angle: number, cx?: number, cy?: number): void {
+  static rotate(
+    element: SVGElement,
+    angle: number,
+    cx?: number,
+    cy?: number
+  ): void {
     const currentTransform = this.getTransform(element);
     const center = cx !== undefined && cy !== undefined ? ` ${cx} ${cy}` : '';
-    const newTransform = currentTransform ? `${currentTransform} rotate(${angle}${center})` : `rotate(${angle}${center})`;
+    const newTransform = currentTransform
+      ? `${currentTransform} rotate(${angle}${center})`
+      : `rotate(${angle}${center})`;
     this.setTransform(element, newTransform);
   }
 
@@ -400,10 +470,12 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   static createPathFromPoints(points: { x: number; y: number }[]): string {
     if (points.length === 0) return '';
 
-    const path = points.map((point, index) => {
-      const command = index === 0 ? 'M' : 'L';
-      return `${command} ${point.x} ${point.y}`;
-    }).join(' ');
+    const path = points
+      .map((point, index) => {
+        const command = index === 0 ? 'M' : 'L';
+        return `${command} ${point.x} ${point.y}`;
+      })
+      .join(' ');
 
     // Close the path if it has more than 2 points
     if (points.length > 2) {
@@ -416,18 +488,26 @@ static estimateTextWidth(text: string, fontSize: number, fontFamily: string): nu
   /**
    * Check if two elements overlap
    */
-  static elementsOverlap(el1: SVGGraphicsElement, el2: SVGGraphicsElement): boolean {
+  static elementsOverlap(
+    el1: SVGGraphicsElement,
+    el2: SVGGraphicsElement
+  ): boolean {
     const bbox1 = this.getBBox(el1);
     const bbox2 = this.getBBox(el2);
 
-    return !(bbox1.x + bbox1.width < bbox2.x ||
+    return !(
+      bbox1.x + bbox1.width < bbox2.x ||
       bbox2.x + bbox2.width < bbox1.x ||
       bbox1.y + bbox1.height < bbox2.y ||
-      bbox2.y + bbox2.height < bbox1.y);
+      bbox2.y + bbox2.height < bbox1.y
+    );
   }
 }
 
-export function convertToViewportCoordinates(geometry: any, viewport: any): any {
+export function convertToViewportCoordinates(
+  geometry: any,
+  viewport: any
+): any {
   const imageToViewport = (point: any) => {
     const viewportPoint = viewport.imageToViewportCoordinates(point.x, point.y);
     return { x: viewportPoint.x, y: viewportPoint.y };
@@ -436,32 +516,43 @@ export function convertToViewportCoordinates(geometry: any, viewport: any): any 
   switch (geometry.type) {
     case 'rectangle': {
       const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
-      const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
+      const bottomRight = imageToViewport({
+        x: geometry.x + geometry.width,
+        y: geometry.y + geometry.height,
+      });
       return {
         ...geometry,
         x: topLeft.x,
         y: topLeft.y,
         width: bottomRight.x - topLeft.x,
-        height: bottomRight.y - topLeft.y
+        height: bottomRight.y - topLeft.y,
       };
     }
     case 'circle': {
       const center = imageToViewport({ x: geometry.cx, y: geometry.cy });
-      const radiusPoint = imageToViewport({ x: geometry.cx + geometry.r, y: geometry.cy });
-      const radius = Math.sqrt(Math.pow(radiusPoint.x - center.x, 2) + Math.pow(radiusPoint.y - center.y, 2));
+      const radiusPoint = imageToViewport({
+        x: geometry.cx + geometry.r,
+        y: geometry.cy,
+      });
+      const radius = Math.sqrt(
+        Math.pow(radiusPoint.x - center.x, 2) +
+          Math.pow(radiusPoint.y - center.y, 2)
+      );
       return {
         ...geometry,
         cx: center.x,
         cy: center.y,
-        r: radius
+        r: radius,
       };
     }
     case 'polygon':
     case 'freehand': {
-      const viewportPoints = geometry.points.map((point: any) => imageToViewport(point));
+      const viewportPoints = geometry.points.map((point: any) =>
+        imageToViewport(point)
+      );
       return {
         ...geometry,
-        points: viewportPoints
+        points: viewportPoints,
       };
     }
     case 'point': {
@@ -469,18 +560,21 @@ export function convertToViewportCoordinates(geometry: any, viewport: any): any 
       return {
         ...geometry,
         x: viewportPoint.x,
-        y: viewportPoint.y
+        y: viewportPoint.y,
       };
     }
     case 'text': {
       const topLeft = imageToViewport({ x: geometry.x, y: geometry.y });
-      const bottomRight = imageToViewport({ x: geometry.x + geometry.width, y: geometry.y + geometry.height });
+      const bottomRight = imageToViewport({
+        x: geometry.x + geometry.width,
+        y: geometry.y + geometry.height,
+      });
       return {
         ...geometry,
         x: topLeft.x,
         y: topLeft.y,
         width: bottomRight.x - topLeft.x,
-        height: bottomRight.y - topLeft.y
+        height: bottomRight.y - topLeft.y,
       };
     }
     default:

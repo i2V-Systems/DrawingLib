@@ -72,6 +72,10 @@ export interface PolylineArrowGeometry extends BaseGeometry {
   }[];
 }
 
+export interface LineGeometry extends BaseGeometry {
+  type: 'line'
+  points: [Point, Point]
+}
 
 /**
  * Text geometry
@@ -119,4 +123,5 @@ export type Geometry =
   | FreehandGeometry
   | TextGeometry
   | PointGeometry
-  | PolylineArrowGeometry; 
+  | PolylineArrowGeometry
+  | LineGeometry; 
