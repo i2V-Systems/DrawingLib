@@ -170,6 +170,54 @@ polylineArrow(
   return annotation;
 }
 
+
+/**
+ * Creates a Line Annotation Object with LabelModel support
+ */
+line(
+  id: string,
+  labelModel: LabelModel | null,
+  strokeColor: string,
+  strokeWidth: number,
+  coordinates: number[][],
+  group: string = ''
+): Annotation {
+  const points = coordinates.map(([x, y]) => ({ x, y }));
+  
+  if (points.length !== 2) {
+    throw new Error('Line requires exactly 2 points');
+  }
+
+  const annotation: Annotation = {
+    id: id,
+    type: 'Annotation',
+    body: this.createAnnotationBody(labelModel?.labelName, group),
+    target: {
+      selector: {
+        type: 'SvgSelector',
+        geometry: {
+          type: 'line',
+          points: [points[0], points[1]] // Ensure exactly 2 points as [Point, Point]
+        }
+      }
+    },
+    style: {
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      fill: 'none',
+      fillOpacity: 0.1
+    }
+  };
+
+  // Add label if labelModel is provided
+  if (labelModel && labelModel.labelName) {
+    annotation.label = this.createLabelFromModel(labelModel);
+  }
+
+  return annotation;
+}
+
+
 /**
  * Create TextGeometry from LabelModel
  */
