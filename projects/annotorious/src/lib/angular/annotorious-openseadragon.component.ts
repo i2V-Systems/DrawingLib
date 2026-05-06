@@ -11,7 +11,15 @@ import {
   AfterViewInit,
   NgZone,
 } from '@angular/core';
-import OpenSeadragon from 'openseadragon';
+import * as OpenSeadragon from 'openseadragon';
+
+// openseadragon ships as `export =` (CJS function with namespace members).
+// `import * as` makes types/namespace members work without needing the
+// `esModuleInterop` flag (which ng-packagr strips). At runtime, depending
+// on the consuming bundler's interop, the callable lives either at
+// `.default` or directly on the namespace — pick whichever is callable.
+const OpenSeadragonCtor: any =
+  (OpenSeadragon as any).default ?? OpenSeadragon;
 import { OpenSeadragonAnnotator } from '../core/annotator/OpenSeadragonAnnotator';
 import { Annotation, AnnotationEvent } from '../types/annotation.types';
 import {
@@ -170,7 +178,7 @@ export class AnnotoriousOpenseadragonComponent
   ngOnInit() {
     // Initialize OpenSeadragon viewer outside Angular zone
     this.ngZone.runOutsideAngular(() => {
-      this.viewer = OpenSeadragon({
+      this.viewer = OpenSeadragonCtor({
         id: this.viewerId,
         prefixUrl: 'assets/openseadragon/images/',
         tileSources: {
@@ -249,11 +257,13 @@ export class AnnotoriousOpenseadragonComponent
     stroke?: string,
     strokeWidth?: number,
     labelText?: string,
-    group?: string
+    group?: string,
+    maxPoints?: number
   ): void {
     this.ngZone.run(() => {
       if (this.annotator) {
-        this.annotator.activateTool(tool);
+        const options = maxPoints != null ? { maxPoints } : undefined;
+        this.annotator.activateTool(tool, options);
         if (labelText || stroke || strokeWidth) {
           this.annotator.pendingLabelText = labelText;
           this.annotator.pendingStyle = {

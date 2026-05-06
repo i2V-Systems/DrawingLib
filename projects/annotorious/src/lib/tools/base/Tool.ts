@@ -15,6 +15,14 @@ export interface ToolCapabilities {
 }
 
 /**
+ * Optional per-activation options. Tools read what they support and ignore the rest.
+ */
+export interface ToolActivationOptions {
+  // Hard cap on vertex count for polygon-like tools; auto-completes on reaching it.
+  maxPoints?: number;
+}
+
+/**
  * Base abstract class for all annotation tools
  */
 export abstract class Tool extends EventEmitter {
@@ -37,7 +45,7 @@ export abstract class Tool extends EventEmitter {
   /**
    * Activate the tool and attach event listeners (tools should use their own svg reference)
    */
-  abstract activate(): void;
+  abstract activate(options?: ToolActivationOptions): void;
 
   /**
    * Deactivate the tool and detach event listeners (tools should use their own svg reference)

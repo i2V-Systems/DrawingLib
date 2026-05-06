@@ -1,4 +1,4 @@
-import OpenSeadragon from 'openseadragon';
+import * as OpenSeadragon from 'openseadragon';
 import { EventEmitter } from '../events/EventEmitter';
 import { StyleManager } from '../managers/StyleManager';
 import { ToolManager } from '../managers/ToolManager';
@@ -9,6 +9,7 @@ import { isTouchDevice, enableTouchTranslation } from '../../utils/Touch';
 import { Theme, ShapeStyle } from '../managers/StyleManager';
 import { Crosshair, CrosshairConfig } from './Crosshair';
 import { createTools } from '../../tools';
+import { ToolActivationOptions } from '../../tools/base/Tool';
 import { SvgOverlay, SvgOverlayInfo } from './SvgOverlay';
 import { EditManager } from '../managers/EditManager';
 import { convertToViewportCoordinates } from '../../utils/SVGUtils';
@@ -480,9 +481,9 @@ export class OpenSeadragonAnnotator extends EventEmitter {
     return this.toolManager.getTools().map((tool) => tool.name);
   }
 
-  activateTool(name: string): void {
+  activateTool(name: string, options?: ToolActivationOptions): void {
     this.clearSelectionAndEditing();
-    this.toolManager.activateTool(name);
+    this.toolManager.activateTool(name, options);
   }
 
   getActiveTool(): string | null {
@@ -529,7 +530,7 @@ hideAnnotations(ids: string[]): void {
 }
 
 /**
- * Show multiple annotations by IDs  
+ * Show multiple annotations by IDs
  */
 showAnnotations(ids: string[]): void {
   ids.forEach(id => this.state.setAnnotationVisible(id, true));

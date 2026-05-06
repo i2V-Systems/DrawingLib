@@ -1,6 +1,6 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { Point } from '../../types/shape.types';
-import { Tool, ToolName } from '../../tools/base/Tool';
+import { Tool, ToolActivationOptions, ToolName } from '../../tools/base/Tool';
 import { SvgOverlay } from '../annotator/SvgOverlay';
 
 /**
@@ -39,7 +39,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
 
   constructor(overlay: SvgOverlay) {
     super();
-    
+
     this.overlay = overlay;
     this.tools = new Map();
     this.state = {
@@ -47,7 +47,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
       isDrawing: false
     };
     this.enabled = true;
-    
+
     // Store event listener references for cleanup
     this.eventListeners = {
       pointerdown: this.handleSvgPointerDown.bind(this),
@@ -155,7 +155,7 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
   /**
    * Activate a tool by name
    */
-  activateTool(name: ToolName): void {
+  activateTool(name: ToolName, options?: ToolActivationOptions): void {
     if (!this.enabled) return;
 
     if (!name || typeof name !== 'string') {
@@ -173,13 +173,16 @@ export class ToolManager extends EventEmitter<ToolManagerEvents> {
       try {
         this.deactivateActiveTool();
         this.state.activeTool = tool;
-        tool.activate();
+        tool.activate(options);
         // Add event listeners when tool is activated
         this.addEventListeners();
         this.emit('toolActivated', { tool });
       } catch (error) {
         this.emit('error', { message: `Failed to activate tool '${name}': ${error instanceof Error ? error.message : 'Unknown error'}` });
       }
+    } else if (options) {
+      // Same tool re-activated with new options — apply them.
+      tool.activate(options);
     }
   }
 

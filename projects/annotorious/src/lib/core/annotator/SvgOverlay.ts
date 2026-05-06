@@ -1,4 +1,4 @@
-import OpenSeadragon from 'openseadragon';
+import * as OpenSeadragon from 'openseadragon';
 import { Geometry } from '../../types';
 
 export interface SvgOverlayConfig {
