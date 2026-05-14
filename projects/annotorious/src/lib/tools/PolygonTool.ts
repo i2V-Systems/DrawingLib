@@ -1,4 +1,4 @@
-import { Tool } from './base/Tool';
+import { Tool, ToolActivationOptions } from './base/Tool';
 import { Point } from '../types/shape.types';
 import { ShapeFactory } from '../shapes/base/ShapeFactory';
 import { PolygonShape } from '../shapes/PolygonShape';
@@ -16,6 +16,7 @@ export class PolygonTool extends Tool {
   private isCurrentlyDrawing = false;
   private onComplete: (shape: PolygonShape) => void;
   private minPoints = 3;
+  private maxPoints: number | null = null;
   private snapDistance = 20;
   private doubleClickTimeout: number | null = null;
 
@@ -29,9 +30,13 @@ export class PolygonTool extends Tool {
     this.onComplete = onComplete;
   }
 
-  override activate(): void {
+  override activate(options?: ToolActivationOptions): void {
     // Tool is now activated - no need to add event listeners
     // The ToolManager will handle all events and delegate to this tool
+    this.maxPoints =
+      options?.maxPoints != null && options.maxPoints >= this.minPoints
+        ? options.maxPoints
+        : null;
   }
 
   override deactivate(): void {
@@ -121,6 +126,9 @@ export class PolygonTool extends Tool {
       if (this.currentShape) {
         this.currentShape.update({ type: 'polygon', points: this.points });
       }
+      if (this.maxPoints != null && this.points.length >= this.maxPoints) {
+        this.completeShape();
+      }
     }
   }
 
@@ -179,6 +187,7 @@ export class PolygonTool extends Tool {
 
     this.points = [];
     this.isCurrentlyDrawing = false;
+    this.maxPoints = null;
 
     // Clear double click timeout
     if (this.doubleClickTimeout !== null) {
